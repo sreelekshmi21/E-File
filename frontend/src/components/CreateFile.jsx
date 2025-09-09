@@ -31,7 +31,7 @@ export default function CreateFile() {
   };
 
   const handleFileChange = (e) => {
-    setFile(e.target.files);
+    setFile(Array.from(e.target.files));
   };
 
   const handleSave = async (e) => {
@@ -42,10 +42,25 @@ export default function CreateFile() {
             showToast("All fields are required.", '', "danger");
             return;
         }
-    console.log('fileb data',formData)
+
+//          const data = new FormData();
+
+//   // Append form fields
+//   for (let key in formData) {
+//     data.append(key, formData[key]);
+//   }
+
+   
+
+  
+//     // console.log('fileb data',data)
+//     for (let pair of data.entries()) {
+//   console.log(`${pair[0]}:`, pair[1]);
+// }
      try {
     const response = await fetch("http://localhost:5000/createfile", {
       method: "POST",
+      // body: data // No headers here! Browser sets Content-Type correctly
       headers: {
         "Content-Type": "application/json",
       },
@@ -59,7 +74,7 @@ export default function CreateFile() {
       console.log("Server response:", data);
       // setToast({ show: true, title: "Signup Successful!", body: `` });
       showToast("File created successfully!", "", "success");
-
+       navigate('/fileinbox')
       // setFormData({
       //   username: "",
       //   email: "",
@@ -96,7 +111,7 @@ export default function CreateFile() {
   const formData = new FormData();
   // formData.append("file", file);
   for (let i = 0; i < file.length; i++) {
-      formData.append('file', file[i]);  // 'files' matches backend field name
+      formData.append('file', file[i]);  
     }
   try {
     const res = await fetch("http://localhost:5000/upload", {
@@ -112,6 +127,10 @@ export default function CreateFile() {
     setMessage(data.message);
     // alert(data.message)
     showToast(data.message,'', "success");
+    // console.log(data.files.map(file=> file.url))
+
+   
+
     setLoading(false);
   } catch (err) {
     setMessage("Upload failed!");
