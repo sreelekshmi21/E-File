@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import DeleteModal from './DeleteModal';
 import { useToast } from '../context/ToastContext';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import { getAttachments } from '../utils/dbProvider';
 
 export default function FileInbox() {
 
@@ -8,6 +11,8 @@ export default function FileInbox() {
       const [showModal, setShowModal] = useState(false);
       const [fileToDelete, setFileToDelete] = useState(null);
       const [search, setSearch] = useState("");
+
+      const navigate = useNavigate()
 
      const { showToast } = useToast();
 
@@ -58,6 +63,7 @@ export default function FileInbox() {
   };
 
 
+
   const filteredFiles = files.filter((file) =>
     Object.values(file).some((val) =>
       String(val).toLowerCase().includes(search.toLowerCase())
@@ -65,11 +71,87 @@ export default function FileInbox() {
   );
 
 
+  // const getAttachments = async (fileId) =>{
+  //   try {
+  //   const response = await fetch(`http://localhost:5000/api/attachments?file_id=${fileId}`);
+  //   const data = await response.json();
+
+  //   console.log('Attachments=========================:', data);
+
+  //   return data
+  //   // ✅ Set the file data and attachments to state
+  //   // setFormData(fileToEdit);        // If you have a state for form fields
+  //   // setAttachments(data);           // Assuming you have useState for attachments
+
+  //   // ✅ Optional: Navigate or open the form section if needed
+  //   // navigate('/createfile', { state: {fileToEdit, data} }); // Only if using react-router
+  // } catch (error) {
+  //   console.error('Failed to load attachments:', error);
+  // }
+  // }
+
+
+  const handleEditClick = async (fileToEdit) => {
+  // 1. Find the file to edit
+  // const fileToEdit = filteredFiles.find((task) => task.id === id);
+  console.log('fileToEdit:', fileToEdit, fileToEdit?.id);
+
+  if (!fileToEdit) {
+    console.error('File not found for editing');
+    return;
+  }
+
+  const data = await getAttachments(fileToEdit?.id)
+
+  navigate('/createfile', { state: {fileToEdit, data, viewMode: false} });
+
+  // 2. Fetch attachments related to this file
+  // try {
+  //   const response = await fetch(`http://localhost:5000/api/attachments?file_id=${fileToEdit.id}`);
+  //   const data = await response.json();
+
+  //   console.log('Attachments=========================:', data);
+
+  //   // ✅ Set the file data and attachments to state
+  //   // setFormData(fileToEdit);        // If you have a state for form fields
+  //   // setAttachments(data);           // Assuming you have useState for attachments
+
+  //   // ✅ Optional: Navigate or open the form section if needed
+  //   navigate('/createfile', { state: {fileToEdit, data} }); // Only if using react-router
+  // } catch (error) {
+  //   console.error('Failed to load attachments:', error);
+  // }
+};
+
+const handleViewClick = async (fileToEdit) =>{
+  // const fileToEdit = filteredFiles.find((task) => task.id === id);
+  console.log('fileToEdit:', fileToEdit, fileToEdit?.id);
+
+  if (!fileToEdit) {
+    console.error('File not found for editing');
+    return;
+  }
+  const data = await getAttachments(fileToEdit?.id)
+
+  navigate('/createfile', { state: {fileToEdit, data, viewMode: true} });
+}
+
+
+
+
+
+
+
   return (
     <>
     <div className="container mt-5">
+       <div className="row">
+         
+             <Sidebar />
+         
+  <div className="col-md-10">        
   <div className="card shadow-lg">
-    <div className="card-header bg-primary text-white">
+    <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
       <h4 className="mb-0">📑 File Register</h4>
        <input
             type="text"
@@ -85,49 +167,54 @@ export default function FileInbox() {
           <tr>
             <th scope="col">#</th>
             <th scope="col">File No.</th>
-            <th scope="col">File Name</th>
+            <th scope="col">File</th>
             <th scope="col">File Subject</th>
             <th scope="col">Date Added</th>
-            <th scope="col">InwardNum</th>
-             <th scope="col">OutwardNum</th>
-              <th scope="col">Current Status</th>
+            {/* <th scope="col">InwardNum</th> */}
+             {/* <th scope="col">OutwardNum</th> */}
+              <th scope="col">Live File Location</th>
                <th scope="col">Remarks</th>
             <th scope="col">Status</th>
-            <th scope="col">Action</th>
+            {/* <th scope="col">Action</th> */}
           </tr>
         </thead>
         <tbody id="fileTableBody">
              {filteredFiles.map((file, index) => {
       let badgeClass = "bg-secondary";
-      if (file.current_status === "Approved") badgeClass = "bg-success";
-      if (file.current_status === "Pending") badgeClass = "bg-warning text-dark";
-      if (file.current_status === "Rejected") badgeClass = "bg-danger";
+      if (file.status === "Approved") badgeClass = "bg-success";
+      if (file.status === "Pending") badgeClass = "bg-warning text-dark";
+      if (file.status === "Rejected") badgeClass = "bg-danger";
 
       return (
-        <tr key={file.id}>
+        <tr key={file?.id} onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }}>
           <td>{index + 1}</td>
-          <td>{file.file_id}</td>
-          <td>{file.file_name}</td>
-          <td>{file.file_subject}</td>
-          <td>{file.date_added}</td>
-          <td>{file.inwardnum}</td>
-          <td>{file.outwardnum}</td>
-          <td>{file.current_status}</td>
-          <td>{file.remarks}</td>
+          <td>{file?.file_id}</td>
+          <td>{file?.file_name}</td>
+          <td>{file?.file_subject}</td>
+          {/* <td>{file.date_added}</td> */}
+          <td>{new Date(file?.date_added).toLocaleString()}</td>
+          {/* <td>{file.inwardnum}</td> */}
+          {/* <td>{file.outwardnum}</td> */}
+          <td>{file?.current_status}</td>
+          <td>{file?.remarks}</td>
           <td>
             <span className={`badge ${badgeClass}`}>
-              {file.current_status}
+              {file?.status}
             </span>
           </td>
-          <td>
-            <button className="btn btn-sm btn-primary">View</button>
-            <button className="btn btn-sm btn-warning mx-1">Edit</button>
+          {/* <td>
+            <button 
+            className="btn btn-sm btn-primary"
+            onClick={() => handleViewClick(file?.id)}>View</button>
+            <button className="btn btn-sm btn-warning mx-1"
+                    onClick={() => handleEditClick(file?.id)}
+            >Edit</button>
             <button
               className="btn btn-sm btn-danger"
-               onClick={() => handleDeleteClick(file.id)}>
+               onClick={() => handleDeleteClick(file?.id)}>
               Delete
             </button>
-          </td>
+          </td> */}
         </tr>
       );
     })}
@@ -141,6 +228,8 @@ export default function FileInbox() {
         </tbody>        
       </table>
     </div>
+  </div>
+  </div>
   </div>
 </div>
     {showModal && <DeleteModal showModal={showModal} setShowModal={setShowModal} confirmDelete={confirmDelete}/>}

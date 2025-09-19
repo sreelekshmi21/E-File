@@ -42,6 +42,7 @@ export default function Login() {
     if (response.ok) {
       // alert("Login Successful!");
       console.log("User data:", data.user);
+      localStorage.setItem("user", JSON.stringify(data.user));
       //  setToast({ show: true, title: "Login Success", body: `Welcome ${loginData.username}` });
       // navigate("/dashboard");
       showToast("Login Success", `Welcome ${loginData.username}`, "success");

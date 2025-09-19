@@ -1,11 +1,17 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Editor } from "@tinymce/tinymce-react";
 
-export default function DocumentEditor() {
+export default function DocumentEditor({file_id,fetchComments,viewMode, approvalStatus, setApprovalStatus}) {
 
     const editorRef = useRef(null);
     const [comment, setComment] = useState('');
   // const [status, setStatus] = useState('');
+
+  console.log('approval status',approvalStatus)
+
+  useEffect(() => {
+  console.log("Loaded file_id:", file_id);
+  }, [file_id])
 
   const handleSave = async () => {
     if (editorRef.current) {
@@ -21,14 +27,16 @@ export default function DocumentEditor() {
     }
 
       console.log("Document content:", content);
+      const user = JSON.parse(localStorage.getItem("user"));
+       const userId = user.id;
      try{
       // send to backend
       const response = await fetch("http://localhost:5000/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          file_id: 268,         // Replace with actual file ID
-          user_id: 13,         // Replace with actual user ID
+          file_id: file_id,         // Replace with actual file ID
+          user_id: userId,         // Replace with actual user ID
           comment: content    // Use 'comment' key to match your DB field
         }),
       });
@@ -38,6 +46,7 @@ export default function DocumentEditor() {
       if (response.ok) {
         alert('✅ Comment added!');
         setComment('');
+        fetchComments()
       } else {
         alert(`❌ Failed: ${data.error || 'Unknown error'}`);
       }
@@ -49,6 +58,11 @@ export default function DocumentEditor() {
     }
   };
 }
+
+
+  const handleApprovalStatusChange = (e) => {
+    setApprovalStatus(e.target.value);
+  };
 
 
   return (
@@ -72,12 +86,23 @@ export default function DocumentEditor() {
             "bold italic underline | alignleft aligncenter alignright alignjustify | " +
             "bullist numlist outdent indent | removeformat | help",
         }}
+        disabled={viewMode}
       />
-
-      <button className="btn btn-primary mt-3" onClick={handleSave}>
-        Save Document
-      </button>
+      
+      {!viewMode && <button className="btn btn-primary mt-3" onClick={handleSave}>
+        Add Comment
+      </button>}
        {/* <p>{status}</p> */}
+       <br /><br />
+       <label for="approvalStatus">Select Approval Status:</label>
+        <select id="approvalStatus" name="approvalStatus" 
+           value={approvalStatus} onChange={handleApprovalStatusChange}
+           required>
+          <option value="">-- Select Status --</option>
+          <option value="approved">✅ Approved</option>
+          <option value="rejected">❌ Rejected</option>
+          <option value="pending">⏳ Pending</option>
+        </select>
     </div>
   )
 }
