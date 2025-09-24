@@ -5,7 +5,11 @@ import { useToast } from '../context/ToastContext';
 import Sidebar from './Sidebar';
 import { getAttachments } from '../utils/dbProvider';
 
+
+
 export default function CreateFile() {
+
+  const BASE_URL = import.meta.env.VITE_API_URL 
 
   const navigate = useNavigate()
   const { showToast } = useToast();
@@ -290,7 +294,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   //   console.error("Error submitting form:", error);
   //   alert("Something went wrong!");
   // }
-
+    navigate('/fileinbox')
 
   }
 
@@ -300,7 +304,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
   }
 
-  console.log('ATTACHMENTS',file)
+  
 
   const handleUpload = async () => {
   if (!file) {
@@ -392,7 +396,7 @@ function stripHtml(htmlString) {
   return tempDiv.textContent || tempDiv.innerText || "";
 }
 
-console.log('selDept====',selectedDepartment)
+
 
 useEffect(() => {
   const fetchDivisions = async () => {
@@ -404,7 +408,6 @@ useEffect(() => {
     try {
       const res = await fetch(`http://localhost:5000/api/divisions/${selectedDepartment}`);
       const data = await res.json();
-      console.log('div=====',data)
       setDivisions(data);
     } catch (error) {
       console.error('Failed to fetch divisions:', error);
@@ -426,7 +429,6 @@ useEffect(() => {
     try {
       const res = await fetch(`http://localhost:5000/api/units/${selectedDivision}`);
       const data = await res.json();
-      console.log('div=====',data)
       setUnits(data);
     } catch (error) {
       console.error('Failed to fetch Units:', error);
@@ -438,14 +440,12 @@ useEffect(() => {
 }, [selectedDivision]);
 
 
-console.log('selectedDivision:',selectedDivision)
 
 
   useEffect(() => {
     if (selectedDepartment && selectedDivision && selectedUnit && formData?.file_id) {
       const dt = new Date().getFullYear()
       const generatedName = `${selectedDepartment}/${selectedDivision}/${selectedUnit}/${formData?.file_id}/${dt}`;
-      console.log('dgen',generatedName)
       setFileName(generatedName);
     } else {
       setFileName('');
@@ -475,7 +475,9 @@ console.log('selectedDivision:',selectedDivision)
 };
   
 
-const handleCancel = () =>{
+const handleCancel = async () =>{
+  // const data = await getAttachments(fileToEdit?.id)
+  // setAttachments(data)
   setViewMode(true)
 }
 
@@ -491,9 +493,9 @@ const handleCancel = () =>{
       <button>EDIT FILE</button> */}
       <div className="d-flex align-items-center mb-4">
         <h4 className="text-center flex-grow-1 m-0">{fileToEdit?.id ? 'FILE DETAILS' : 'CREATE FILE'}</h4>
-        {fileToEdit?.id && <button 
+        {/* {fileToEdit?.id && <button 
             className="btn btn-primary ms-auto"
-            onClick={() => handleEditClick(fileToEdit)}>CLICK TO EDIT FILE</button>}
+            onClick={() => handleEditClick(fileToEdit)}>CLICK TO EDIT FILE</button>} */}
       </div>
       {/* Your Form Rows Go Here (already formatted in previous reply) */}
       {/* Example Row */}
@@ -561,7 +563,7 @@ const handleCancel = () =>{
 </select>
         </div>
         <div className="col-md-6 d-flex align-items-center gap-2">
-          <label className="form-label mb-0" htmlFor="file_id">File Number:</label>
+          <label className="form-label mb-0" htmlFor="file_id">No.:</label>
           <input type="text" name="file_id" id="file_id" className="form-control" value={formData.file_id} onChange={handleChange} disabled={viewMode}/>
         </div>
         </div>
@@ -574,7 +576,7 @@ const handleCancel = () =>{
         </div>
          <div className="row mb-3">
         <div className="col-md-12 d-flex align-items-center gap-2">
-          <label className="form-label mb-0" htmlFor="file_name">File:</label>
+          <label className="form-label mb-0" htmlFor="file_name">File Number:</label>
           <input type="text" name="file_name" id="file_name" className="form-control" value={fileName} 
           onChange={handleChange} 
           disabled={true}/>
@@ -640,8 +642,8 @@ const handleCancel = () =>{
   {/* Remarks */}
   <div className="row mb-3">
     <div className="col-md-12">
-      <label className="form-label" htmlFor="remarks">Remarks:</label>
-      <textarea name="remarks" id="remarks" className="form-control" rows="2" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea>
+      <label className="form-label" htmlFor="remarks">Note File:</label>
+      <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea>
     </div>
   </div>
 
@@ -658,7 +660,7 @@ const handleCancel = () =>{
     <ul className="list-group">
       {attachments?.map((att, index) => (
         <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-          <a href={`http://localhost:5000/${att.path}`} target="_blank" rel="noopener noreferrer" className="text-break">
+          <a href={`${BASE_URL}/${att.path}`} target="_blank" rel="noopener noreferrer" className="text-break">
             {/* {att.path.split('/').pop()} Just the filename */}
             {att?.filename}
           </a>
@@ -701,6 +703,9 @@ const handleCancel = () =>{
       <input type="text" name="receiver" id="receiver" className="form-control" value={formData?.receiver} onChange={handleChange} disabled={viewMode}/>
     </div>
    </div> 
+   {fileToEdit?.id && <button 
+            className="btn btn-primary ms-auto"
+            onClick={() => handleEditClick(fileToEdit)}>EDIT FILE</button>}
 
       {/* Add more rows as per previous layout */}
       
@@ -727,12 +732,15 @@ const handleCancel = () =>{
      
       {/* <h3>Comments</h3> */}
       {comments?.map((comment) => (
-        <div class="card w-100" key={comment?.id}>
-          <div class="card-body">
-          <h5 class="card-title">{stripHtml(comment?.comment)}</h5>
-          <p class="card-text">By: {comment?.username}</p>
+        <div className="card w-100" key={comment?.id}>
+          <div className="card-body">
+          <h5 className="card-title">{stripHtml(comment?.comment)}</h5>
+          <p className="card-text">By: {comment?.username}</p>
           <span>{new Date(comment?.created_at).toLocaleString()}</span>
           {/* <a href="#" class="btn btn-primary">Button</a> */}
+          <span>{comment?.attachments?.map((attach,idx) => <p key={idx} style={{ color: 'red' }}>Attachments: <a href={`${BASE_URL}/${attach?.path}`} target="_blank" rel="noopener noreferrer" className="text-break">
+            {attach?.filename}
+          </a></p>)}</span>
         </div>
         </div>
       ))}

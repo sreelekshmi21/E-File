@@ -166,8 +166,8 @@ const handleViewClick = async (fileToEdit) =>{
         <thead className="table-dark">
           <tr>
             <th scope="col">#</th>
+            <th scope="col">No.</th>
             <th scope="col">File No.</th>
-            <th scope="col">File</th>
             <th scope="col">File Subject</th>
             <th scope="col">Date Added</th>
             {/* <th scope="col">InwardNum</th> */}
