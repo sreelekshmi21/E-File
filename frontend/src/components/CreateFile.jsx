@@ -4,6 +4,7 @@ import DocumentEditor from './DocumentEditor';
 import { useToast } from '../context/ToastContext';
 import Sidebar from './Sidebar';
 import { getAttachments } from '../utils/dbProvider';
+import { useAuth } from '../context/AuthContext';
 
 
 
@@ -13,6 +14,8 @@ export default function CreateFile() {
 
   const navigate = useNavigate()
   const { showToast } = useToast();
+
+   const { user } = useAuth();
 
   const [fileId, setFileId] = useState(null)
 
@@ -29,7 +32,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
   const [fileName, setFileName] = useState('');
 
-   const [approvalStatus, setApprovalStatus] = useState('');
+   const [approvalStatus, setApprovalStatus] = useState('pending');
 
   const [attachments, setAttachments] = useState([])
 
@@ -173,8 +176,6 @@ const [selectedUnit, setSelectedUnit] = useState('');
     return;
   }
 
-
-
   formData.append("file_id", file_id);
   formData.append("file_name", file_name);
   formData.append("file_subject", file_subject);
@@ -185,7 +186,8 @@ const [selectedUnit, setSelectedUnit] = useState('');
   // formData.append("outwardnum", outwardnum);
   formData.append("current_status", current_status);
   formData.append("remarks", remarks);
-  formData.append("status", "pending");
+  // formData.append("status", "pending");
+  formData.append("status", approvalStatus == undefined ? 'pending' : approvalStatus);
   formData.append('department',selectedDepartment)
   formData.append('division',selectedDivision)
   formData.append('unit',selectedUnit)
@@ -482,6 +484,7 @@ const handleCancel = async () =>{
 }
 
 
+
   return (
    <>
       <div className="container-fluid mt-4">
@@ -703,7 +706,7 @@ const handleCancel = async () =>{
       <input type="text" name="receiver" id="receiver" className="form-control" value={formData?.receiver} onChange={handleChange} disabled={viewMode}/>
     </div>
    </div> 
-   {fileToEdit?.id && <button 
+   {fileToEdit?.id && user?.user?.role === 'admin' && <button 
             className="btn btn-primary ms-auto"
             onClick={() => handleEditClick(fileToEdit)}>EDIT FILE</button>}
 
@@ -746,7 +749,7 @@ const handleCancel = async () =>{
       ))}
        <div className="container">
         <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
-        viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus}/>
+        viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} user={user}/>
         {/* Optional: Show Timeline Button */}
         {/* <button className="btn btn-success px-5 mt-3" onClick={handleTimeline}>Show Timeline</button> */}
       </div>

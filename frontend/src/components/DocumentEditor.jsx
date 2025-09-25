@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Editor } from "@tinymce/tinymce-react";
 
-export default function DocumentEditor({file_id,fetchComments,viewMode, approvalStatus, setApprovalStatus}) {
+export default function DocumentEditor({file_id,fetchComments,viewMode, approvalStatus, setApprovalStatus, user}) {
 
     const editorRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -180,7 +180,8 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
        <label htmlFor="approvalStatus">Select Approval Status:</label>
         <select id="approvalStatus" name="approvalStatus" 
            value={approvalStatus} onChange={handleApprovalStatusChange}
-           required>
+           required 
+           disabled={user?.user?.role == 'viewer' || viewMode}>
           <option value="">-- Select Status --</option>
           <option value="approved">✅ Approved</option>
           <option value="rejected">❌ Rejected</option>

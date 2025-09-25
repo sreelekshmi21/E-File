@@ -1,8 +1,12 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
+
+     const { login } = useAuth();
+
      const [loginData, setLoginData] = useState({
         username: "",
         password: "",
@@ -45,6 +49,7 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(data.user));
       //  setToast({ show: true, title: "Login Success", body: `Welcome ${loginData.username}` });
       // navigate("/dashboard");
+      login(data);
       showToast("Login Success", `Welcome ${loginData.username}`, "success");
        setTimeout(() =>  {
         navigate("/dashboard")

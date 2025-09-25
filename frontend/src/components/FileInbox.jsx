@@ -181,9 +181,9 @@ const handleViewClick = async (fileToEdit) =>{
         <tbody id="fileTableBody">
              {filteredFiles.map((file, index) => {
       let badgeClass = "bg-secondary";
-      if (file.status === "Approved") badgeClass = "bg-success";
-      if (file.status === "Pending") badgeClass = "bg-warning text-dark";
-      if (file.status === "Rejected") badgeClass = "bg-danger";
+      if (file.status === "approved") badgeClass = "bg-success";
+      if (file.status === "pending") badgeClass = "bg-warning text-dark";
+      if (file.status === "rejected") badgeClass = "bg-danger";
 
       return (
         <tr key={file?.id} onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }}>
