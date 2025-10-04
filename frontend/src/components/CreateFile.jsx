@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import Sidebar from './Sidebar';
 import { getAttachments } from '../utils/dbProvider';
 import { useAuth } from '../context/AuthContext';
+import Select from 'react-select';
 
 
 
@@ -107,7 +108,12 @@ const [selectedUnit, setSelectedUnit] = useState('');
       const response = await fetch('http://localhost:5000/api/departments');
       const data = await response.json(); // ✅ parse response as JSON
       console.log('departments:', data);
-      setDepartments(data); // ✅ now set actual department data
+      const options = data.map((dept) => ({
+          value: dept.code,
+          label: `${dept.dept_name} (${dept.code})`,
+          id: dept?.id
+        }));
+      setDepartments(options); // ✅ now set actual department data
     } catch (error) {
       console.error('Failed to fetch departments:', error);
     }
@@ -408,17 +414,25 @@ useEffect(() => {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/divisions/${selectedDepartment}`);
+      const res = await fetch(`http://localhost:5000/api/departments/${selectedDepartment?.id}/divisions`);
       const data = await res.json();
-      setDivisions(data);
-    } catch (error) {
+       const options = data.map((div) => ({
+          value: div?.code,
+          label: `${div?.name} (${div?.code})`,
+          id: div?.id
+        }));
+        console.log('dsivisions',options)
+      setDivisions(options);
+      setSelectedDivision(null)
+    }
+    catch (error) {
       console.error('Failed to fetch divisions:', error);
       setDivisions([]);
     }
   };
 
   fetchDivisions();
-}, [selectedDepartment]);
+}, [selectedDepartment?.id]);
 
 
 useEffect(() => {
@@ -427,32 +441,40 @@ useEffect(() => {
       setUnits([]);
       return;
     }
-
     try {
-      const res = await fetch(`http://localhost:5000/api/units/${selectedDivision}`);
+      const res = await fetch(`http://localhost:5000/api/divisions/${selectedDivision?.id}/units`);
       const data = await res.json();
-      setUnits(data);
-    } catch (error) {
+      console.log('dat',data)
+       const options = data.map((div) => ({
+          value: div?.code,
+          label: `${div?.name} (${div?.code})`,
+          id: div?.id
+        }));
+      setUnits(options);
+      setSelectedUnit(null)
+    } 
+    
+     catch (error) {
       console.error('Failed to fetch Units:', error);
       setUnits([]);
     }
   };
 
   fetchUnits();
-}, [selectedDivision]);
+}, [selectedDivision?.id]);
 
 
 
 
   useEffect(() => {
-    if (selectedDepartment && selectedDivision && selectedUnit && formData?.file_id) {
+    if (selectedDepartment?.value && selectedDivision?.value && selectedUnit?.value && formData?.file_id) {
       const dt = new Date().getFullYear()
-      const generatedName = `${selectedDepartment}/${selectedDivision}/${selectedUnit}/${formData?.file_id}/${dt}`;
+      const generatedName = `${selectedDepartment?.value}/${selectedDivision?.value}/${selectedUnit?.value}/${formData?.file_id}/${dt}`;
       setFileName(generatedName);
     } else {
       setFileName('');
     }
-  }, [selectedDepartment, selectedDivision, selectedUnit, formData?.file_id]);
+  }, [selectedDepartment?.value, selectedDivision?.value, selectedUnit?.value, formData?.file_id]);
 
 
 
@@ -505,10 +527,17 @@ const handleCancel = async () =>{
       <div className="row mb-3">
         <div className="col-md-6 d-flex align-items-center gap-2">
           <label className="form-label mb-0" htmlFor="department">Department</label>
-          <select
+          <Select
+                  options={departments}
+                  value={selectedDepartment}
+                  onChange={(selectedOption) => setSelectedDepartment(selectedOption)}
+                  isSearchable={true}
+                  placeholder="Search or Select Department"
+                /> 
+          {/* <select
               value={selectedDepartment || ''}
              onChange={(e) => {
-    // const selected = departments.find((dept) => dept.code === e.target.value);
+   
     setSelectedDepartment(e.target.value);
   }}
                required
@@ -516,18 +545,18 @@ const handleCancel = async () =>{
                name="department"
                disabled={viewMode}>
   <option value="">-- Select Department --</option>
-  {departments.map((dept) => (
+  {departments?.map((dept) => (
     <option key={dept.id} value={dept.code}>
-      {dept.name} ({dept.code})
+      {dept?.dept_name} ({dept.code})
     </option>
   ))}
-</select>
+</select> */}
         </div>
         
           
          <div className="col-md-6 d-flex align-items-center gap-2">
           <label className="form-label mb-0" htmlFor="division">Divisions</label>
-          <select
+          {/* <select
               value={selectedDivision}
              onChange={(e) => setSelectedDivision(e.target.value)}
                required
@@ -542,13 +571,26 @@ const handleCancel = async () =>{
       {division.name} ({division.code})
     </option>
   ))}
-</select>
+</select> */}
+<Select
+        options={divisions}   
+        value={selectedDivision}
+        onChange={(selectedOption) => setSelectedDivision(selectedOption)}
+        isSearchable={true}
+        placeholder="Divisions"
+      /> 
         </div>
         </div>
       <div className="row mb-3">
         <div className="col-md-6 d-flex align-items-center gap-2">
           <label className="form-label mb-0" htmlFor="unit">Units</label>
-          <select
+          <Select
+        options={units}
+        value={selectedUnit}
+        onChange={(selectedOption) => setSelectedUnit(selectedOption)}
+        isSearchable={true}
+        placeholder="Units"
+      /> {/* <select
               value={selectedUnit}
              onChange={(e) => setSelectedUnit(e.target.value)}
                required
@@ -563,7 +605,7 @@ const handleCancel = async () =>{
       {unit.name} ({unit.code})
     </option>
   ))}
-</select>
+</select> */}
         </div>
         <div className="col-md-6 d-flex align-items-center gap-2">
           <label className="form-label mb-0" htmlFor="file_id">No.:</label>

@@ -4,6 +4,8 @@ import { useToast } from '../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { getAttachments } from '../utils/dbProvider';
+import Select from 'react-select';
+
 
 export default function FileInbox() {
 
@@ -12,25 +14,87 @@ export default function FileInbox() {
       const [fileToDelete, setFileToDelete] = useState(null);
       const [search, setSearch] = useState("");
 
+      const [currentPage, setCurrentPage] = useState(1);
+       const [totalPages, setTotalPages] = useState(1);
+
+      const [departments, setDepartments] = useState([])
+      const [selectedDepartment, setSelectedDepartment] = useState(null);
+      const [selectedDivision, setSelectedDivision] = useState(null);
+      const [divisions, setDivisions] = useState([]);
+
+       const [units, setUnits] = useState([]);
+
+      const [selectedUnit, setSelectedUnit] = useState('');
+
+      const [approvalStatus, setApprovalStatus] = useState('');
+
       const navigate = useNavigate()
 
      const { showToast } = useToast();
 
-    async function loadFiles() {
-    try {
-      const response = await fetch("http://localhost:5000/api/files");
-      const data = await response.json();
-      console.log('data============',data)
-        setFiles(data);
-    } catch (err) {
-      console.error("Error loading files:", err);
-    }
+     const handleApprovalStatusChange = (e) => {
+    setApprovalStatus(e.target.value);
+  };
+
+  //   async function loadFiles(departmentId) {
+  //   try {
+  //     const response = await fetch(`http://localhost:5000/api/files?status=${approvalStatus}&department=${departmentId}`);
+  //     const data = await response.json();
+  //     console.log('data============',data)
+  //       setFiles(data);
+  //   } catch (err) {
+  //     console.error("Error loading files:", err);
+  //   }
+  // }
+  async function loadFiles(departmentId, division = '', unit = '', status = '') {
+  try {
+    const params = new URLSearchParams();
+    if (departmentId) params.append('department', departmentId);
+     if (division) params.append('division', division);
+     if (unit) params.append('unit', unit);
+    if (status) params.append('status', status);
+
+    console.log("API Request Params:", params.toString());
+
+    const response = await fetch(`http://localhost:5000/api/files?${params.toString()}`);
+    const data = await response.json();
+    console.log('Fetched data:', data);
+    setFiles(data);
+  } catch (err) {
+    console.error("Error loading files:", err);
   }
+}
 
   useEffect(() => {
-    loadFiles()
+    const getDepartments = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/departments');
+        const data = await response.json(); // ✅ parse response as JSON
+        console.log('departments:', data);
+        const options = data.map((dept) => ({
+          value: dept.code,
+          label: `${dept.dept_name} (${dept.code})`,
+          id: dept?.id
+        }));
+        console.log('options:',options)
+        setDepartments(options); // ✅ now set actual department data
+      } catch (error) {
+        console.error('Failed to fetch departments:', error);
+      }
+    };
+  
+    getDepartments();
+    const user = JSON.parse(localStorage.getItem("user")); 
+      console.log('LC',user)
+      const departmentId = user?.department
+      console.log('LC',departmentId)
+      if (departmentId) {
+    loadFiles(departmentId);
+  }
    
   }, [])
+
+
   
 
   const confirmDelete = async () =>{
@@ -137,8 +201,101 @@ const handleViewClick = async (fileToEdit) =>{
 }
 
 
+const handleFilterByDept = () =>{
+  // if(selectedDepartment){
+  //   loadFiles(selectedDepartment?.value, selectedDivision?.value, selectedUnit?.value, approvalStatus || '');
+  // }
+  loadFiles(
+    selectedDepartment?.value || '', 
+    selectedDivision?.value || '', 
+    selectedUnit?.value || '', 
+    approvalStatus || ''
+  );
+}
+
+const clearFilter = () =>{
+  
+    
+    // setSelectedDepartment(null)
+    // setApprovalStatus('')
+    // loadFiles('GSO')
+    const defaultDept = 'GSO';
+  const defaultStatus = '';
+  const defaultDiv = '';
+  const defaultUnit = '';
+
+  setSelectedDepartment(defaultDept);
+  setSelectedDivision(defaultDiv);
+  setSelectedUnit(defaultUnit)
+  setApprovalStatus(defaultStatus);
+  loadFiles(defaultDept, defaultDiv, defaultUnit, defaultStatus);
+}
 
 
+
+
+useEffect(() => {
+  const fetchDivisions = async () => {
+    if (!selectedDepartment) {
+      setDivisions([]);
+      return;
+    }
+
+    console.log('selDept',selectedDepartment,selectedDepartment?.code)
+    // try {
+    //   const res = await fetch(`http://localhost:5000/api/divisions/${selectedDepartment?.value}`);
+    //   const data = await res.json();
+    //   setDivisions(data);
+    // } catch (error) {
+    //   console.error('Failed to fetch divisions:', error);
+    //   setDivisions([]);
+    // }
+    try {
+      const res = await fetch(`http://localhost:5000/api/departments/${selectedDepartment?.id}/divisions`);
+      const data = await res.json();
+       const options = data.map((div) => ({
+          value: div?.code,
+          label: `${div?.name} (${div?.code})`,
+          id: div?.id
+        }));
+        console.log('dsivisions',options)
+      setDivisions(options);
+    } catch (error) {
+      console.error('Failed to fetch divisions:', error);
+      setDivisions([]);
+    }
+  };
+
+  fetchDivisions();
+}, [selectedDepartment?.id]);
+
+
+
+useEffect(() => {
+  const fetchUnits = async () => {
+    if (!selectedDivision) {
+      setUnits([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/divisions/${selectedDivision?.id}/units`);
+      const data = await res.json();
+      console.log('dat',data)
+       const options = data.map((div) => ({
+          value: div?.code,
+          label: `${div?.name} (${div?.code})`,
+          id: div?.id
+        }));
+      setUnits(options);
+    } catch (error) {
+      console.error('Failed to fetch Units:', error);
+      setUnits([]);
+    }
+  };
+
+  fetchUnits();
+}, [selectedDivision?.id]);
 
 
 
@@ -153,6 +310,7 @@ const handleViewClick = async (fileToEdit) =>{
   <div className="card shadow-lg">
     <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
       <h4 className="mb-0">📑 File Register</h4>
+      
        <input
             type="text"
             className="form-control w-25"
@@ -161,6 +319,99 @@ const handleViewClick = async (fileToEdit) =>{
             onChange={(e) => setSearch(e.target.value)}
           />
     </div>
+    <div>
+            <Select
+        options={departments}
+        value={selectedDepartment}
+        onChange={(selectedOption) => setSelectedDepartment(selectedOption)}
+        isSearchable={true}
+        placeholder="Search or Select Department"
+      /> 
+
+     {/* <select
+              value={selectedDepartment || ''}
+             onChange={(e) => {
+   
+    setSelectedDepartment(e.target.value);
+  }}
+               required
+               id="department"
+               name="department"
+               >
+  <option value="">-- Select Department --</option>
+  {departments.map((dept) => (
+    <option key={dept?.id} value={dept?.code}>
+      {dept?.dept_name} ({dept?.code})
+    </option>
+  ))}
+</select> */}
+{/* <div className="col-md-6 d-flex align-items-center gap-2">
+          <label className="form-label mb-0" htmlFor="division">Divisions</label> */}
+          {/* <select
+              value={selectedDivision}
+             onChange={(e) => setSelectedDivision(e.target.value)}
+               required
+               id="division"
+               name="division"
+              //  disabled={viewMode}
+          >
+ 
+   <option value="">-- Select Division --</option>
+  {divisions.map((division, idx) => (
+    <option key={idx} value={division?.code}>
+      {division?.name} ({division?.code})
+    </option>
+  ))}
+</select> */}
+<br />
+<Select
+        options={divisions}   
+        value={selectedDivision}
+        onChange={(selectedOption) => setSelectedDivision(selectedOption)}
+        isSearchable={true}
+        placeholder="Division"
+      /> 
+      <br />
+      <Select
+        options={units}
+        value={selectedUnit}
+        onChange={(selectedOption) => setSelectedUnit(selectedOption)}
+        isSearchable={true}
+        placeholder="Unit"
+      /> 
+      <br />
+{/* <select
+              value={selectedUnit}
+             onChange={(e) => setSelectedUnit(e.target.value)}
+               required
+               id="unit"        
+               name="unit"
+              //  disabled={viewMode}
+          >
+ 
+   <option value="">-- Select Unit --</option>
+  {units.map((unit, idx) => (
+    <option key={idx} value={unit.code}>
+      {unit.name} ({unit.code})
+    </option>
+  ))}
+</select> */}
+        {/* </div> */}
+<select id="approvalStatus" name="approvalStatus" 
+           value={approvalStatus} onChange={handleApprovalStatusChange}
+           required 
+          //  disabled={user?.user?.role == 'viewer' || viewMode}
+          >
+          <option value="">-- Select Status --</option>
+          <option value="approved">✅ Approved</option>
+          <option value="rejected">❌ Rejected</option>
+          <option value="pending">⏳ Pending</option>
+        </select>
+        <div className="d-flex">
+<button className="btn btn-primary ms-auto" onClick={handleFilterByDept}>Apply Filter</button>
+<button className="btn btn-secondary ms-2" onClick={clearFilter}>Clear Filter</button>
+</div>
+</div>
     <div className="card-body">
       <table className="table table-striped table-hover table-bordered align-middle">
         <thead className="table-dark">
@@ -230,7 +481,37 @@ const handleViewClick = async (fileToEdit) =>{
     </div>
   </div>
   </div>
+  {/* <div className="col-md-3">
+      ZZZZZZZZZZZZZZZ
+  </div> */}
   </div>
+  {/* <div className="pagination">
+  <button
+    onClick={() => loadFiles({
+      department: selectedDepartment,
+      division: selectedDivision,
+      status: approvalStatus,
+      page: currentPage - 1
+    })}
+    disabled={currentPage === 1}
+  >
+    Previous
+  </button>
+
+  <span>Page {currentPage} of {totalPages}</span>
+
+  <button
+    onClick={() => loadFiles({
+      department: selectedDepartment,
+      division: selectedDivision,
+      status: approvalStatus,
+      page: currentPage + 1
+    })}
+    disabled={currentPage === totalPages}
+  >
+    Next
+  </button>
+</div> */}
 </div>
     {showModal && <DeleteModal showModal={showModal} setShowModal={setShowModal} confirmDelete={confirmDelete}/>}
     </>

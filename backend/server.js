@@ -1,4 +1,5 @@
 require('dotenv').config();
+const SECRET_KEY = process.env.JWT_SECRET;
 
 const express = require("express");
 const multer = require("multer");
@@ -6,11 +7,79 @@ const path = require("path");
 const cors = require("cors");
 const app = express();
 const PORT = 5000;
-
 const mysql = require("mysql2");
+const fs = require('fs');
+
+// async function insertDivisions() {
+//   try {
+//     // Load divisions data from JSON
+//     const rawData = fs.readFileSync('./divisions.json', 'utf-8');
+//     const divisions = JSON.parse(rawData);
+
+//     // Connect to MySQL
+//     const connection = await mysql.createConnection({
+//       host: 'localhost',       // your DB host
+//       user: 'root',            // your DB user
+//       password: '',            // your DB password
+//       database: 'your_db_name' // your DB name
+//     });
+
+//     console.log(`✅ Connected to database. Inserting ${divisions.length} divisions...`);
+
+//     for (const division of divisions) {
+//       try {
+//         await connection.execute(
+//           `INSERT INTO divisions (code, name, department_id) VALUES (?, ?, ?)`,
+//           [division.code, division.name, division.department_id]
+//         );
+//         console.log(`✔ Inserted: ${division.name} (${division.code})`);
+//       } catch (err) {
+//         console.error(`❌ Failed to insert ${division.code}:`, err.message);
+//       }
+//     }
+
+//     await connection.end();
+//     console.log('✅ All insertions complete. Connection closed.');
+
+//   } catch (err) {
+//     console.error('🚫 Error:', err);
+//   }
+// }
+
+// insertDivisions();
+
+
+// const authenticateToken = require('./middleware/auth');
+
+const jwt = require('jsonwebtoken');
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization']; // Format: Bearer <token>
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
+  }
+
+  jwt.verify(token, SECRET_KEY, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid or expired token.' });
+
+    req.user = user; // Attach user info to request
+    next();
+  });
+}
+
+module.exports = authenticateToken;
+
+
+
+
 
 app.use(cors());
 app.use(express.json());
+
+
+
 
 
 // Serve static files from 'uploads' folder
@@ -338,6 +407,16 @@ app.post("/login", (req, res) => {
       return res.status(500).json({ error: "Database error" });
     }
 
+    if (results.length === 0) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+    const token = jwt.sign(
+    { id: results[0].id, username: results[0].username, role: results[0].role },
+    SECRET_KEY,
+    { expiresIn: '1h' }
+  );
+
     if (results.length > 0) {
       // ✅ Login success
       res.json({
@@ -347,7 +426,8 @@ app.post("/login", (req, res) => {
           username: results[0].username,
           email: results[0].email,
           department: results[0].department,
-          role: results[0].role
+          role: results[0].role,
+          token: token
         },
       });
     } else {
@@ -355,6 +435,9 @@ app.post("/login", (req, res) => {
       res.status(401).json({ error: "Invalid username or password" });
     }
   });
+
+  
+
 });
 
 // app.post("/createfile", async (req, res) => {
@@ -592,6 +675,105 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
 
 
 
+//new
+app.get("/api/files", (req, res) => {
+  console.log("API /api/files called with query:", req.query);
+  
+  const statusParam = req.query.status;
+  const departmentId = req.query.department;
+  const division = req.query.division;
+  const unit = req.query.unit;
+
+  const isGSO = departmentId && departmentId.toUpperCase() === 'GSO';
+
+  if (statusParam) {
+    // Handle status filtering
+    const statuses = statusParam.split(',').map(s => s.trim().toLowerCase());
+    const allowedStatuses = ['pending', 'approved', 'rejected', 'completed', 'failed'];
+    const filteredStatuses = statuses.filter(s => allowedStatuses.includes(s));
+
+    if (filteredStatuses.length === 0) {
+      return res.status(400).json({ error: "No valid status values provided" });
+    }
+
+    const placeholders = filteredStatuses.map(() => '?').join(', ');
+    let query = `SELECT * FROM files WHERE LOWER(status) IN (${placeholders})`;
+    const values = [...filteredStatuses];
+
+    // if (!isGSO) {
+    //   query += ` AND department = ?`;
+    //   values.push(departmentId);
+    // }
+    if (departmentId && departmentId.toUpperCase() !== 'GSO') {
+      query += ` AND department = ?`;
+      values.push(departmentId);
+   }
+
+    if (division) {
+      query += ` AND division = ?`;
+      values.push(division);
+    }
+
+    if (unit) {
+      query += ` AND unit = ?`;
+      values.push(unit);
+    }
+
+    query += ` AND status IS NOT NULL ORDER BY date_added DESC`;
+
+    console.log('Filtered Query:', query);
+    console.log('Query Values:', values);
+
+    db.query(query, values, (err, results) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      res.json(results);
+    });
+
+  } else {
+    // No status filtering
+    let query = `SELECT * FROM files`;
+    const values = [];
+
+    const conditions = [];
+
+    if (!isGSO) {
+      conditions.push(`department = ?`);
+      values.push(departmentId);
+    }
+
+    if (division) {
+      conditions.push(`division = ?`);
+      values.push(division);
+    }
+
+     if (unit) {
+      conditions.push(`unit = ?`);
+      values.push(unit);
+    }
+
+     if (conditions.length > 0) {
+      query += ` WHERE ` + conditions.join(' AND ');
+    }
+
+
+    query += ` ORDER BY date_added DESC`;
+
+    console.log("Query for all files:", query);
+    console.log("Values==:", values);
+
+    db.query(query, values, (err, results) => {
+      if (err) {
+        console.error("Error fetching files:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      res.json(results);
+    });
+  }
+});
+
 
 
 
@@ -601,17 +783,132 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
 
 
 // API: Fetch all files
-app.get("/api/files", (req, res) => {
+// app.get("/api/files",  (req, res) => {
+//   console.log("API /api/files called with query:", req.query);
+//   const query = "SELECT * FROM files ORDER BY date_added DESC";
+//   db.query(query, (err, results) => {
+//     if (err) {
+//       console.error("Error fetching files:", err);
+//       return res.status(500).json({ error: "Database error" });
+//     }
+//     res.json(results);
+//   });
+// });
 
-  const query = "SELECT * FROM files ORDER BY date_added DESC";
-  db.query(query, (err, results) => {
+// app.get("/api/files", (req, res) => {
+//    console.log("API /api/files called with query===:", req.query);
+//   const statusParam = req.query.status;
+//    const departmentId = req.query.department; 
+
+//    const isGSO = departmentId && departmentId.toUpperCase() === 'GSO';
+
+//   //   if (!departmentId) {
+//   //   return res.status(400).json({ error: "Missing department ID" });
+//   // }
+
+//   if (statusParam) {
+//     // If status param is provided, filter based on it
+//     const statuses = statusParam.split(',').map(s => s.trim().toLowerCase());
+
+//     const allowedStatuses = ['pending', 'approved', 'rejected', 'completed', 'failed'];
+//     const filteredStatuses = statuses.filter(s => allowedStatuses.includes(s));
+
+//     if (filteredStatuses.length === 0) {
+//       return res.status(400).json({ error: "No valid status values provided" });
+//     }
+
+//     const placeholders = filteredStatuses.map(() => '?').join(', ');
+//     const query = `SELECT * FROM files WHERE LOWER(status) IN (${placeholders}) AND department = ? AND status IS NOT NULL ORDER BY date_added DESC`;
+
+//     console.log('Filtered Query:', query);
+//     console.log('filteredStatuses:', filteredStatuses);
+
+//      const values = [...filteredStatuses, departmentId];
+
+//     db.query(query, values, (err, results) => {
+//       if (err) {
+//         console.error("Database error:", err);
+//         return res.status(500).json({ error: "Database error" });
+//       }
+//       res.json(results);
+//     });
+
+//   } else {
+//     // If no status param, return all files
+//     const query = "SELECT * FROM files WHERE department = ? ORDER BY date_added DESC";
+
+//     console.log("Fetching all files");
+//     db.query(query, departmentId, (err, results) => {
+//       if (err) {
+//         console.error("Error fetching files:", err);
+//         return res.status(500).json({ error: "Database error" });
+//       }
+//       console.log('results===',results)
+//       res.json(results);
+//     });
+//   }
+// });
+
+
+
+app.get("/api/files/today", (req, res) => {
+  const department = req.query.department;
+
+  if (!department) {
+    return res.status(400).json({ error: "Missing department" });
+  }
+
+  const query = `SELECT * FROM files WHERE DATE(date_added) = CURDATE()
+                  AND department = ? ORDER BY date_added DESC`;
+
+  db.query(query, [department], (err, results) => {
     if (err) {
-      console.error("Error fetching files:", err);
+      console.error("Database error:", err);
       return res.status(500).json({ error: "Database error" });
     }
+    
     res.json(results);
   });
 });
+
+
+// app.get("/api/files", (req, res) => {
+//   console.log("API /api/files called with query stat:", req.query);
+//   const statusParam = req.query.status;
+//   console.log('stat',statusParam)
+
+//   if (!statusParam) {
+//     return res.status(400).json({ error: "Missing 'status' query parameter" });
+//   }
+
+//   // Convert to array (even if only one status is given)
+//   const statuses = statusParam.split(',').map(s => s.trim().toLowerCase());
+
+//   // Optional: Validate against allowed values
+//   const allowedStatuses = ['pending', 'approved', 'completed', 'failed'];
+//   const filteredStatuses = statuses.filter(s => allowedStatuses.includes(s));
+
+//   if (filteredStatuses.length === 0) {
+//     return res.status(400).json({ error: "No valid status values provided" });
+//   }
+
+//   // Create SQL placeholders (?, ?, ?)
+//   const placeholders = filteredStatuses.map(() => '?').join(', ');
+//   const query = `SELECT * FROM files WHERE status IN (${placeholders}) AND status IS NOT NULL`;
+
+//   console.log('filteredStatuses',filteredStatuses)
+
+//   db.query(query, filteredStatuses, (err, results) => {
+//     if (err) {
+//       console.error("Database error:", err);
+//       return res.status(500).json({ error: "Database error" });
+//     }
+
+//     res.json(results);
+//   });
+// });
+
+
 
 
 // DELETE file by ID
@@ -748,17 +1045,66 @@ app.put('/api/files/:id', async (req, res) => {
 });
 
 
-app.get('/api/departments', (req, res) => {
-  const departments = [
-    { id: 1, name: 'Finance', code: 'FIN' },
-    { id: 2, name: 'Human Resource', code: 'HR' },
-    { id: 3, name: 'Operations', code: 'OPN' },
-    { id: 4, name: 'Marketing', code: 'MKT' },
-  {id: 5, name: 'Santhigri Healthcare and Research Organisation', code: 'SHRO'}
-  ];
+// app.get('/api/departments', (req, res) => {
+//   const departments = [
+//     { id: 1, name: 'Finance', code: 'FIN' },
+//     { id: 2, name: 'Human Resource', code: 'HR' },
+//     { id: 3, name: 'Operations', code: 'OPN' },
+//     { id: 4, name: 'Marketing', code: 'MKT' },
+//   {id: 5, name: 'Santhigri Healthcare and Research Organisation', code: 'SHRO'}
+//   ];
 
-  res.json(departments);
+//   res.json(departments);
+// });
+// GET /departments
+app.get('/api/departments', async (req, res) => {
+  try {
+    const [rows] = await dbPromise.query('SELECT * FROM departments');
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
+
+
+
+app.get('/api/departments/:departmentId/divisions', async (req, res) => {
+  const { departmentId } = req.params; 
+  console.log('departId===',departmentId)
+
+  try {
+    const [rows] = await dbPromise.query(
+      'SELECT id, name, code FROM divisions WHERE department_id = ?', 
+      [departmentId]
+    );
+    
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching divisions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+app.get('/api/divisions/:divisionId/units', async (req, res) => {
+  const { divisionId } = req.params;
+  console.log('divisionId ===', divisionId);
+
+  try {
+    const [rows] = await dbPromise.query(
+      'SELECT id, name, code FROM units WHERE division_id = ?',
+      [divisionId]
+    );
+
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching units:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 
 app.get('/api/divisions/:deptCode', (req, res) => {
@@ -813,4 +1159,11 @@ app.get('/api/units/:divisionCode', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
+});
+
+
+
+app.use((req, res, next) => {
+  console.log("Unknown route:", req.method, req.url);
+  res.status(404).send("Not Found");
 });

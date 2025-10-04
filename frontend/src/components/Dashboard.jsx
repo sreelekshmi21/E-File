@@ -2,16 +2,71 @@ import React from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useState } from 'react';
 
 export default function Dashboard() {
 
     const navigate = useNavigate();
+
+    const { user } = useAuth();
+
+      const [pendingFiles, setPendingFiles] = useState([]);
+      const [approvedFiles, setApprovedFiles] = useState([]);
+      const [rejectedFiles, setRejectedFiles] = useState([]);
+
+      const [totalFiles, setTotalFiles] = useState([]);
+      const [todayFiles, setTodayFiles] = useState([]);
 
     const handleCreateFile = () => {
     // You can open a modal or navigate to a create file page
       navigate("/createfile");
   };
 
+  async function loadTodaysFiles(departmentId) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/files/today?department=${departmentId}`);
+        const data = await response.json();
+        console.log('DATA===',data)
+        setTodayFiles(data)
+         
+   
+          // setFiles(data);
+      } catch (err) {
+        console.error("Error loading files:", err);
+      }
+    }
+
+  async function loadPendingFiles(departmentId) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/files?status=pending,approved,rejected&department=${departmentId}`);
+        const data = await response.json();
+        console.log('DATA',data)
+         
+         setPendingFiles(data.filter(file => file.status.toLowerCase() === 'pending'));
+      setApprovedFiles(data.filter(file => file.status.toLowerCase() === 'approved'));
+      setRejectedFiles(data.filter(file => file.status.toLowerCase() === 'rejected'));
+
+        setTotalFiles(data)
+          // setFiles(data);
+      } catch (err) {
+        console.error("Error loading files:", err);
+      }
+    }
+  
+    useEffect(() => {
+      const user = JSON.parse(localStorage.getItem("user")); 
+      console.log('LC',user)
+      const departmentId = user?.department
+      console.log('LC',departmentId)
+      if (departmentId) {
+    loadPendingFiles(departmentId);
+    loadTodaysFiles(departmentId)
+  }
+      
+     
+    }, [])
+    
   
 
   return (
@@ -75,9 +130,10 @@ export default function Dashboard() {
     <div className="col-md-9">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Dashboard</h2>
-        <button className="btn btn-primary" onClick={handleCreateFile}>
+        {console.log('USER',user)}
+        {user?.user?.role == 'admin' && <button className="btn btn-primary" onClick={handleCreateFile}>
           + Create File
-        </button>
+        </button>}
       </div>
 
       <div className="row">
@@ -85,8 +141,8 @@ export default function Dashboard() {
         <div className="col-md-3">
           <div className="card text-white bg-primary mb-3 shadow">
             <div className="card-body">
-              <h5 className="card-title">Files Sent by me</h5>
-              <p className="card-text display-6">12</p>
+              <h5 className="card-title">Total Files per Department</h5>
+              <p className="card-text display-6">{totalFiles?.length}</p>
             </div>
           </div>
         </div>
@@ -95,8 +151,8 @@ export default function Dashboard() {
         <div className="col-md-3">
           <div className="card text-white bg-success mb-3 shadow">
             <div className="card-body">
-              <h5 className="card-title">Files Processed</h5>
-              <p className="card-text display-6">350</p>
+              <h5 className="card-title">Approved Files</h5>
+              <p className="card-text display-6">{approvedFiles?.length}</p>
             </div>
           </div>
         </div>
@@ -106,7 +162,7 @@ export default function Dashboard() {
           <div className="card text-white bg-warning mb-3 shadow">
             <div className="card-body">
               <h5 className="card-title">Pending Files</h5>
-              <p className="card-text display-6">18</p>
+              <p className="card-text display-6">{pendingFiles?.length}</p>
             </div>
           </div>
         </div>
@@ -116,7 +172,15 @@ export default function Dashboard() {
           <div className="card text-white bg-secondary mb-3 shadow">
             <div className="card-body">
               <h5 className="card-title">Files Received Today</h5>
-              <p className="card-text display-6">5</p>
+              <p className="card-text display-6">{todayFiles?.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-3">
+          <div className="card text-white bg-danger mb-3 shadow">
+            <div className="card-body">
+              <h5 className="card-title">Rejected Files</h5>
+              <p className="card-text display-6">{rejectedFiles?.length}</p>
             </div>
           </div>
         </div>
