@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { getAttachments } from '../utils/dbProvider';
 import Select from 'react-select';
+import { useAuth } from '../context/AuthContext';
 
 
 export default function FileInbox() {
@@ -13,6 +14,8 @@ export default function FileInbox() {
       const [showModal, setShowModal] = useState(false);
       const [fileToDelete, setFileToDelete] = useState(null);
       const [search, setSearch] = useState("");
+
+      const { user } = useAuth();
 
       const [currentPage, setCurrentPage] = useState(1);
        const [totalPages, setTotalPages] = useState(1);
@@ -84,10 +87,12 @@ export default function FileInbox() {
     };
   
     getDepartments();
-    const user = JSON.parse(localStorage.getItem("user")); 
-      console.log('LC',user)
-      const departmentId = user?.department
-      console.log('LC',departmentId)
+    // const user = JSON.parse(localStorage.getItem("user")); 
+    //   console.log('LC',user)
+    //   const departmentId = user?.department
+    //   console.log('LC',departmentId)
+    console.log('user',user)
+    const departmentId = user?.user?.department
       if (departmentId) {
     loadFiles(departmentId);
   }
@@ -260,6 +265,7 @@ useEffect(() => {
         }));
         console.log('dsivisions',options)
       setDivisions(options);
+      setSelectedDivision(null)
     } catch (error) {
       console.error('Failed to fetch divisions:', error);
       setDivisions([]);
@@ -288,6 +294,7 @@ useEffect(() => {
           id: div?.id
         }));
       setUnits(options);
+      setSelectedUnit(null)
     } catch (error) {
       console.error('Failed to fetch Units:', error);
       setUnits([]);
@@ -446,7 +453,7 @@ useEffect(() => {
           <td>{new Date(file?.date_added).toLocaleString()}</td>
           {/* <td>{file.inwardnum}</td> */}
           {/* <td>{file.outwardnum}</td> */}
-          <td>{file?.current_status}</td>
+          <td>{file?.receiver}</td>
           <td>{file?.remarks}</td>
           <td>
             <span className={`badge ${badgeClass}`}>

@@ -554,7 +554,11 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
       });
     });
   }else{
-    return res.status(201).json({ message: "File created without attachments." });
+    return res.status(201).json({ 
+      message: "File created without attachments.", 
+      attachment_count: attachments.length,
+      id: fileResult.insertId
+    });
   }
   });
 });
@@ -1107,53 +1111,144 @@ app.get('/api/divisions/:divisionId/units', async (req, res) => {
 
 
 
-app.get('/api/divisions/:deptCode', (req, res) => {
-  const deptCode = req.params.deptCode;
+// app.get('/api/divisions/:deptCode', (req, res) => {
+//   const deptCode = req.params.deptCode;
 
-  const divisionData = {
-    FIN: [
-    { name: 'Accounts', code: 'ACC' },
-    { name: 'Audit', code: 'AUD' }
-  ],
-  HR: [
-    { name: 'Recruitment', code: 'REC' },
-    { name: 'Training', code: 'TRN' }
-  ],
-  OPN: [
-    { name: 'Support', code: 'SUP' },
-    { name: 'Development', code: 'DEV' }
-  ],
-  MKT: [
-    { name: 'Advertising', code: 'ADV' },
-    { name: 'Branding', code: 'BRD' }
-  ]
-  };
+//   const divisionData = {
+//     FIN: [
+//     { name: 'Accounts', code: 'ACC' },
+//     { name: 'Audit', code: 'AUD' }
+//   ],
+//   HR: [
+//     { name: 'Recruitment', code: 'REC' },
+//     { name: 'Training', code: 'TRN' }
+//   ],
+//   OPN: [
+//     { name: 'Support', code: 'SUP' },
+//     { name: 'Development', code: 'DEV' }
+//   ],
+//   MKT: [
+//     { name: 'Advertising', code: 'ADV' },
+//     { name: 'Branding', code: 'BRD' }
+//   ]
+//   };
 
-  res.json(divisionData[deptCode] || []);
-});
+//   res.json(divisionData[deptCode] || []);
+// });
 
 
-app.get('/api/units/:divisionCode', (req, res) => {
-  const divisionCode = req.params.divisionCode;
+// app.get('/api/units/:divisionCode', (req, res) => {
+//   const divisionCode = req.params.divisionCode;
 
-  const unitsData = {  
-    ADV: [
-    { name: 'Unitone', code: 'UNITONE' },
-    { name: 'Unittwo', code: 'UNITTWO' }
-  ],
-  BRD: [
-    { name: 'Santhigiri Ayurveda Siddha Vaidyasala', code: 'SASV' },
+//   const unitsData = {  
+//     ADV: [
+//     { name: 'Unitone', code: 'UNITONE' },
+//     { name: 'Unittwo', code: 'UNITTWO' }
+//   ],
+//   BRD: [
+//     { name: 'Santhigiri Ayurveda Siddha Vaidyasala', code: 'SASV' },
    
-  ],
-  DEV: [
-    { name: 'Production', code: 'PRD' },
-    { name: 'Quality Assurance', code: 'QA' }   
-  ]
-  };
+//   ],
+//   DEV: [
+//     { name: 'Production', code: 'PRD' },
+//     { name: 'Quality Assurance', code: 'QA' }   
+//   ]
+//   };
 
-  res.json(unitsData[divisionCode] || []);
+//   res.json(unitsData[divisionCode] || []);
+// });
+
+//file events
+app.post('/api/file-events', async (req, res) => {
+  const {
+    event_type,
+    file_id,
+    user_id,
+    origin,
+    forwarded_to,
+    approved_by,
+    viewed_by,
+    edited_by
+  } = req.body;
+
+  if (!event_type || !file_id) {
+    return res.status(400).json({ error: 'event_type and file_id are required' });
+  }
+
+  try {
+    const [result] = await dbPromise.query(
+      `INSERT INTO file_events (event_type, created_at, file_id, user_id, origin, forwarded_to, approved_by,viewed_by,edited_by)
+       VALUES (?, NOW(), ?, ?, ?, ?, ?, ?,?)`,
+      [event_type, file_id, user_id, origin, forwarded_to, approved_by, viewed_by, edited_by]
+    );
+
+    res.status(201).json({
+      message: 'File event logged successfully',
+      event_id: result.insertId
+    });
+  } catch (err) {
+    console.error('Error inserting file event:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
+
+app.get("/api/file-events/:fileId", (req, res) => {
+  const fileId = req.params.fileId;
+  console.log('fileId===',fileId)
+
+  if (!fileId) {
+    return res.status(400).json({ error: "Missing fileId" });
+  }
+
+  // const query = `SELECT * FROM file_events WHERE file_id = ? ORDER BY created_at DESC`;
+  const query = `SELECT 
+      file_events.*, 
+      signup.username 
+    FROM 
+      file_events 
+    JOIN 
+      signup 
+    ON 
+      file_events.user_id = signup.id 
+    WHERE 
+      file_events.file_id = ? 
+    ORDER BY 
+      file_events.created_at DESC`
+
+  db.query(query, [fileId], (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    
+    res.json(results);
+  });
+});
+
+
+
+// app.get('/api/view-file/:fileId', (req, res) => {
+//   const fileId = req.params.fileId;
+//   const userId = req.user?.id; // assuming user is authenticated via middleware
+
+//   // 1. Log the view in file_events
+//   const insertQuery = `
+//     INSERT INTO file_events (file_id, user_id, event_type, created_at)
+//     VALUES (?, ?, 'viewed', NOW())
+//   `;
+
+//   db.query(insertQuery, [fileId, userId], (err) => {
+//     if (err) {
+//       console.error('Error logging view:', err);
+//       // Don't block file view due to logging error
+//     }
+
+//     // 2. Serve the file or data
+//     // You could return file data, metadata, or redirect to a frontend file viewer
+//     res.json({ message: 'File viewed and logged' });
+//   });
+// });
 
 
 

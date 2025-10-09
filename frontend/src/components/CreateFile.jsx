@@ -61,7 +61,6 @@ const [selectedUnit, setSelectedUnit] = useState('');
   // console.log('dat',dat)
 
   useEffect(() => {
-    console.log('fileToEdit in useEffect',fileToEdit)
     function toDatetimeLocalString(utcISOString) {
   const date = new Date(utcISOString);
 
@@ -88,13 +87,23 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
       setApprovalStatus(fileToEdit?.status);
       
-      setSelectedDepartment(fileToEdit?.department)
+      // setSelectedDepartment(fileToEdit?.department)
+      if(fileToEdit?.department && departments.length > 0){
+        console.log('dept',departments)
+        const deptOption = departments.find(dept => dept.value === fileToEdit?.department)
+        setSelectedDepartment(deptOption)
+      }
+      if(fileToEdit?.division && divisions.length > 0){
+        const divOption = divisions.find(div => div.value === fileToEdit?.division)
+        setSelectedDivision(divOption)
+      }
 
-      setSelectedDivision(fileToEdit?.division)
-
-      setSelectedUnit(fileToEdit?.unit)
+      if(fileToEdit?.unit && units.length > 0){
+        const unitOption = units.find(u => u.value === fileToEdit?.unit)
+        setSelectedUnit(unitOption)
+      }
     // fetchAttachments(dat)
-  }, [fileToEdit, data, viewMode]) // only run this effect when `dat` changes
+  }, [fileToEdit, data, viewMode, departments, divisions,units]) // only run this effect when `dat` changes
 
  
    const [file, setFile] = useState(null)
@@ -177,7 +186,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   const current_status = document.getElementById("current_status").value;
   const remarks = document.getElementById("remarks").value;
 
-   if (!file_id || !file_subject || !receiver || !current_status) {
+   if (!file_id || !file_subject || !current_status) {
     showToast("All fields are required.", '', "danger");
     return;
   }
@@ -194,9 +203,9 @@ const [selectedUnit, setSelectedUnit] = useState('');
   formData.append("remarks", remarks);
   // formData.append("status", "pending");
   formData.append("status", approvalStatus == undefined ? 'pending' : approvalStatus);
-  formData.append('department',selectedDepartment)
-  formData.append('division',selectedDivision)
-  formData.append('unit',selectedUnit)
+  formData.append('department',selectedDepartment?.value)
+  formData.append('division',selectedDivision?.value)
+  formData.append('unit',selectedUnit?.value)
 
   // 2. Append one or more files (attachments)
   const files = document.getElementById("file").files; // from file input
@@ -204,6 +213,34 @@ const [selectedUnit, setSelectedUnit] = useState('');
     formData.append("file", files[i]); // must match multer field name
   }
 
+  const logEditEvent = async (eventType, forwardedTo) => {
+  // const user = JSON.parse(localStorage.getItem("user"));
+  console.log('user12',user)
+  const editedBy = user?.user?.username
+  const fileData = {
+    event_type: eventType,
+    file_id: fileToEdit.id,
+    user_id: user?.user?.id,
+    origin: selectedDepartment?.value || '',
+    forwarded_to: forwardedTo, 
+    approved_by: user?.user?.username,
+    edited_by: editedBy
+    // notes: 'Updated file metadata' // optional
+  };
+  console.log('fileData',fileData);
+  try {
+    await fetch('http://localhost:5000/api/file-events', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(fileData)
+    });
+    console.log(`✅ '${eventType}' event logged`);
+  } catch (err) {
+    console.error(`❌ Failed to log '${eventType}' event:`, err);
+  }
+};
 
   if(isEditing){
      try {
@@ -222,6 +259,11 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
       setFileId(result.id) //========================
 
+      await logEditEvent('edited',fileToEdit?.receiver)
+       if (approvalStatus === 'approved') {
+        await logEditEvent('approved', fileToEdit?.receiver);
+      }
+
     } else {
       alert("Error: " + result.error);
     }
@@ -229,8 +271,13 @@ const [selectedUnit, setSelectedUnit] = useState('');
     console.error("Request error:", err);
     alert("Failed to upload file.");
   }
+  // logEditEvent()
   }
   else{
+    console.log('formData',formData)
+    for (const [key, value] of formData.entries()) {
+     console.log(`${key}: ${value}`);
+  }
      try {
     const response = await fetch("http://localhost:5000/createfilewithattachments", {
       method: "POST",
@@ -239,12 +286,35 @@ const [selectedUnit, setSelectedUnit] = useState('');
     });
 
     const result = await response.json();
-
+     console.log('RES',result);
     if (response.ok) {
-      alert("File and attachments uploaded successfully!");
+      // alert("File and attachments uploaded successfully!");
       console.log(result);
+      const fid = result?.id
+      // setFileId(result.id) //========================
+      // const user = JSON.parse(localStorage.getItem("user"))
 
-      setFileId(result.id) //========================
+      const eventData = {
+        event_type: 'created',
+        file_id: fid,
+        user_id: user?.user?.id,
+        origin: selectedDepartment?.value || '',
+        forwarded_to: receiver,
+        approved_by: '',
+        edited_by: ''
+     };
+     console.log('event',eventData)
+      const response_ = await fetch("http://localhost:5000/api/file-events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"  // ✅ Add this line
+     },
+      body: JSON.stringify(eventData)
+      // NOTE: Don't set Content-Type manually for FormData
+    });
+
+    const result_ = await response_.json()
+    console.log('result',result_)
 
     } else {
       alert("Error: " + result.error);
@@ -306,11 +376,13 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
   }
 
-   const handleTimeline = (e) => {
-    e.preventDefault();
-    navigate('/filetimeline')
-
-  }
+    const handleTimeline = (file) => {
+    // e.preventDefault();
+    navigate('/filetimeline', {state: {
+        fileId: file?.id,
+        fileName: file?.file_name
+      }})
+    }
 
   
 
@@ -351,9 +423,98 @@ const [selectedUnit, setSelectedUnit] = useState('');
   }
 };
 
-    useEffect(() => {
-     fetchComments();
-    }, [fileToEdit?.id]);
+  //   useEffect(() => {
+  //     const viewedKey = `viewed_file_${fileToEdit?.id}`;
+  // const alreadyViewed = sessionStorage.getItem(viewedKey); // check if already logged
+  // console.log('already viewed', alreadyViewed)
+
+  //  if (fileToEdit?.id && !alreadyViewed) {
+  //   console.log('already viewed', fileToEdit?.id, alreadyViewed)
+  //   fetchComments(); // your existing logic
+  //     const logFileView = async () => {
+  //     try {
+  //       const res = await fetch(`http://localhost:5000/api/view-file/${fileToEdit?.id}`, {
+  //         method: 'GET',
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //         },
+  //       });
+
+  //       sessionStorage.setItem(viewedKey, 'true'); 
+
+  //       const data = await res.json();
+  //       console.log('File view logged:', data);
+  //     } catch (error) {
+  //       console.error('File view logged Error logging file view:', error);
+  //     }
+  //   };
+  
+  //   //  fetchComments();
+  //   console.log('📌 Logging file view for', fileToEdit?.id);
+  //    logFileView()
+  //   }
+  //   }, [fileToEdit?.id]);
+ useEffect(() => {
+  if (!fileToEdit?.id) return;
+
+  fetchComments(); // No issue here
+
+  const logFileView = async () => {
+    const viewedKey = `viewed_file_${fileToEdit.id}`;
+    const alreadyViewed = sessionStorage.getItem(viewedKey);
+
+    if (alreadyViewed) {
+      console.log("⛔ Already viewed. Skipping log for:", fileToEdit.id);
+      return;
+    }
+
+    console.log('📌 Logging file view for', fileToEdit.id);
+
+    try {
+      // const user = JSON.parse(localStorage.getItem("user"));
+      const userId = user?.user?.id;
+
+      if (!userId) {
+        console.warn("⚠️ No user ID found. Skipping file view log.");
+        return;
+      }
+
+      console.log('fileToEdit===',fileToEdit?.department)
+      const fileData = {
+        event_type: 'viewed',
+        file_id: fileToEdit.id,
+        user_id: userId,
+        origin: fileToEdit?.department || '',
+        forwarded_to: fileToEdit?.receiver || null,
+        viewed_by: user?.user?.username,
+        edited_by: ''
+      };
+
+      const res = await fetch(`http://localhost:5000/api/file-events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(fileData)
+      });
+
+      if (res.ok) {
+        sessionStorage.setItem(viewedKey, 'true');
+        const data = await res.json();
+        console.log('✅ File view logged:', data);
+      } else {
+        console.warn('⚠️ Failed to log view. Response not OK');
+      }
+    } catch (error) {
+      console.error('❌ Error logging file view:', error);
+    }
+  };
+
+  logFileView();
+}, [fileToEdit?.id]);
+
+
+
 
     const fetchComments = async () => {
       console.log('fetch commnets',fileToEdit?.id)
@@ -504,6 +665,12 @@ const handleCancel = async () =>{
   // setAttachments(data)
   setViewMode(true)
 }
+
+
+
+  
+
+  
 
 
 
@@ -748,10 +915,37 @@ const handleCancel = async () =>{
       <input type="text" name="receiver" id="receiver" className="form-control" value={formData?.receiver} onChange={handleChange} disabled={viewMode}/>
     </div>
    </div> 
-   {fileToEdit?.id && user?.user?.role === 'admin' && <button 
+   {/* {fileToEdit?.id && user?.user?.role === 'admin' && <button 
             className="btn btn-primary ms-auto"
             onClick={() => handleEditClick(fileToEdit)}>EDIT FILE</button>}
-
+            
+      {fileToEdit?.id && <div>
+      <button className="btn btn-secondary px-5" 
+              onClick={() => handleTimeline(fileToEdit?.id)}>
+        File Timeline
+      </button>
+    </div>} */}
+    {fileToEdit?.id && (
+  <div className="d-flex mt-3">
+    {console.log('user role', user)}
+    {user?.user?.role === 'admin' && (
+      <button 
+        className="btn btn-primary"
+        onClick={() => handleEditClick(fileToEdit)}
+      >
+        EDIT FILE
+      </button>
+    )}
+    <div className="ms-auto">
+    <button 
+      className="btn btn-secondary px-5"
+      onClick={() => handleTimeline(fileToEdit)}
+    >
+      File Timeline
+    </button>
+    </div>
+  </div>
+)}
       {/* Add more rows as per previous layout */}
       
       {/* Final Save Button */}
@@ -767,6 +961,7 @@ const handleCancel = async () =>{
         Cancel
       </button>
     </div>}
+    
   </div>
 )}
     </div>

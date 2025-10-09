@@ -55,10 +55,12 @@ export default function Dashboard() {
     }
   
     useEffect(() => {
-      const user = JSON.parse(localStorage.getItem("user")); 
-      console.log('LC',user)
-      const departmentId = user?.department
-      console.log('LC',departmentId)
+      // const userInfo = JSON.parse(localStorage.getItem("user")); 
+      // console.log('USER LC',userInfo)
+      // const departmentId = userInfo?.department
+      // console.log('LC',departmentId)
+      // console.log('USER+++',user)
+      const departmentId = user?.user?.department
       if (departmentId) {
     loadPendingFiles(departmentId);
     loadTodaysFiles(departmentId)
@@ -67,7 +69,7 @@ export default function Dashboard() {
      
     }, [])
     
-  
+  console.log('USER',user)
 
   return (
     // <div className="container my-4">
@@ -130,7 +132,6 @@ export default function Dashboard() {
     <div className="col-md-9">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Dashboard</h2>
-        {console.log('USER',user)}
         {user?.user?.role == 'admin' && <button className="btn btn-primary" onClick={handleCreateFile}>
           + Create File
         </button>}

@@ -1,7 +1,19 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
+
+  const { logout } = useAuth();
+
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    navigate('/');     
+    logout();
+  };
+
+
   return (
     <>
      <div className="col-md-2 sidebar p-3">
@@ -18,13 +30,12 @@ export default function Sidebar() {
           {/* <a className="nav-link" href="#">Inbox</a> */}
           <Link className="nav-link" to='/fileinbox'>Inbox</Link>
         </li>
-        {/* <li className="nav-item">
-          
-          <Link className="nav-link" to='/createfile'>Create File</Link>
-        </li> */}
         <li className="nav-item">
           {/* <a className="nav-link" href="#">Reports</a> */}
-           <Link className="nav-link" to='/'>LogOut</Link>
+           {/* <Link className="nav-link" to='/'>LogOut</Link> */}
+            <button className="nav-link btn btn-link" onClick={handleLogout}>
+                       LogOut
+            </button>
         </li>
         {/* Add more links as needed */}
       </ul>
