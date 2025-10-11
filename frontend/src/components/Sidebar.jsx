@@ -17,27 +17,26 @@ export default function Sidebar() {
   return (
     <>
      <div className="col-md-2 sidebar p-3">
-      <h4 className="mb-4">Navigation</h4>
+      {/* <h4 className="mb-4">Navigation</h4> */}
       <ul className="nav flex-column">
-        <li className="nav-item">
-          {/* <a className="nav-link active" href="#">Dashboard</a> */}
+        <li className="nav-item">        
           <Link className="nav-link" to='/dashboard'>Dashboard</Link>
         </li>
         <li className="nav-item">
-          {/* <a className="nav-link" href="#">Create File</a> */}
-        </li>
-        <li className="nav-item">
-          {/* <a className="nav-link" href="#">Inbox</a> */}
           <Link className="nav-link" to='/fileinbox'>Inbox</Link>
         </li>
         <li className="nav-item">
-          {/* <a className="nav-link" href="#">Reports</a> */}
-           {/* <Link className="nav-link" to='/'>LogOut</Link> */}
-            <button className="nav-link btn btn-link" onClick={handleLogout}>
-                       LogOut
-            </button>
-        </li>
-        {/* Add more links as needed */}
+      <button
+        className="nav-link btn btn-link w-100 text-start"
+        style={{
+          padding: '0.5rem 3rem',
+          color: '#0d6efd',
+          textDecoration: 'none',
+        }}
+        onClick={handleLogout}>
+        LogOut
+      </button>
+    </li>
       </ul>
     </div>
     </>

@@ -782,7 +782,7 @@ const handleCancel = async () =>{
         <div className="row mb-3">
         <div className="col-md-12 d-flex justify-content-center">
             <h2 className="text-center mb-4 fw-bold">
-             {departments.find((dept) => dept.code === selectedDepartment)?.name} Department
+             {departments?.find((dept) => dept?.label === selectedDepartment?.label)?.label}
             </h2>
         </div>
         </div>
@@ -986,7 +986,7 @@ const handleCancel = async () =>{
       ))}
        <div className="container">
         <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
-        viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} user={user}/>
+        viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/>
         {/* Optional: Show Timeline Button */}
         {/* <button className="btn btn-success px-5 mt-3" onClick={handleTimeline}>Show Timeline</button> */}
       </div>

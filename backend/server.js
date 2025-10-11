@@ -1168,7 +1168,8 @@ app.post('/api/file-events', async (req, res) => {
     forwarded_to,
     approved_by,
     viewed_by,
-    edited_by
+    edited_by,
+    commented_by
   } = req.body;
 
   if (!event_type || !file_id) {
@@ -1177,9 +1178,9 @@ app.post('/api/file-events', async (req, res) => {
 
   try {
     const [result] = await dbPromise.query(
-      `INSERT INTO file_events (event_type, created_at, file_id, user_id, origin, forwarded_to, approved_by,viewed_by,edited_by)
-       VALUES (?, NOW(), ?, ?, ?, ?, ?, ?,?)`,
-      [event_type, file_id, user_id, origin, forwarded_to, approved_by, viewed_by, edited_by]
+      `INSERT INTO file_events (event_type, created_at, file_id, user_id, origin, forwarded_to, approved_by,viewed_by,edited_by, commented_by)
+       VALUES (?, NOW(), ?, ?, ?, ?, ?, ?,?, ?)`,
+      [event_type, file_id, user_id, origin, forwarded_to, approved_by, viewed_by, edited_by, commented_by]
     );
 
     res.status(201).json({

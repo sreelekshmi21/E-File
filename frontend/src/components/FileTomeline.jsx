@@ -29,16 +29,17 @@ function FileTimeline() {
  
   return (
   <div className="container-fluid my-4">
-  <div className="row">
+  <div className="row flex-row-reverse">
     <Sidebar />
     <div className="col-md-10 bg-light border p-4">
       <h5 className="mb-4">📜 File Activity Timeline</h5>
        <h4>{location?.state?.fileName}</h4>
-      <div className="timeline position-relative">
+      <div className="timeline position-relative ps-3">
+        {console.log('file',fileEvents)}
         {fileEvents?.map((event, index) => (
           <div
             key={event?.id}
-            className="timeline-item mb-4 position-relative ps-4 border-start border-primary"
+            className="timeline-item mb-5 position-relative ps-4 border-start border-primary"
           >
             {/* Dot Marker */}
             <span
@@ -47,7 +48,7 @@ function FileTimeline() {
             ></span>
 
             {/* Event Content */}
-            <h6 className="fw-bold mb-1 card shadow-sm">
+            <h6 className="fw-bold mb-2 card shadow-sm">
               {event?.event_type} <small className="text-muted">at {new Date(event?.created_at).toLocaleString()}</small>
             </h6>
             <p className="mb-1"><strong>Origin:</strong> {event?.origin || 'N/A'}</p>
@@ -60,6 +61,7 @@ function FileTimeline() {
       <p className="mb-0 text-success"><strong>Approved by:</strong> {event?.approved_by}</p>
     )}
     {event.event_type === 'viewed' && <p className="mb-0"><strong>Viewed by:</strong> {event?.viewed_by || ''}</p>}
+    {event.event_type === 'commented' && <p className="mb-0"><strong>Commented by:</strong> {event?.commented_by || ''}</p>}
           </div>
         ))}
       </div>

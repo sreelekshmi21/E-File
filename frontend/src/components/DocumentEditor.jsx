@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Editor } from "@tinymce/tinymce-react";
+import { useAuth } from '../context/AuthContext';
 
-export default function DocumentEditor({file_id,fetchComments,viewMode, approvalStatus, setApprovalStatus, user}) {
+export default function DocumentEditor({file_id,fetchComments,viewMode, approvalStatus, setApprovalStatus, selectedDepartment, receiver, id}) {
 
     const editorRef = useRef(null);
     const fileInputRef = useRef(null);
+
+    const { user } = useAuth();
 
      const [selectedFiles, setSelectedFiles] = useState([]); 
 
@@ -43,8 +46,8 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
     }
 
       console.log("Document content:", content);
-      const user = JSON.parse(localStorage.getItem("user"));
-       const userId = user.id;
+      // const user = JSON.parse(localStorage.getItem("user"));
+       const userId = user?.user?.id;
      try{
       const formData = new FormData();
 
@@ -76,6 +79,31 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
         fetchComments()
 
         setSelectedFiles([]); // clear files after upload
+
+        
+      const eventData = {
+        event_type: 'commented',
+        file_id: id,
+        user_id: user?.user?.id,
+        origin: selectedDepartment?.value || '',
+        forwarded_to: receiver,
+        approved_by: '',
+        edited_by: '',
+        commented_by: user?.user?.username
+     };
+     console.log('event',eventData)
+      const response_ = await fetch("http://localhost:5000/api/file-events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"  // ✅ Add this line
+     },
+      body: JSON.stringify(eventData)
+      // NOTE: Don't set Content-Type manually for FormData
+    });
+
+    const result_ = await response_.json()
+    console.log('result',result_)
+
       } else {
         alert(`❌ Failed: ${data.error || 'Unknown error'}`);
       }
