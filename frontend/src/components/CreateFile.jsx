@@ -132,6 +132,8 @@ const [selectedUnit, setSelectedUnit] = useState('');
 }, []);
  
 
+
+
    const handleChange = (e) => {
     // if (e.target.name == 'date_added'){
       // console.log('date added',e.target.value)
@@ -316,8 +318,11 @@ const [selectedUnit, setSelectedUnit] = useState('');
     const result_ = await response_.json()
     console.log('result',result_)
 
+     showToast("File and attachments uploaded successfully!", "", "success");
+     navigate('/fileinbox')
     } else {
       alert("Error: " + result.error);
+      showToast("Duplicate Entry not allowed!", "", "danger");
     }
   } catch (err) {
     console.error("Request error:", err);
@@ -372,7 +377,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   //   console.error("Error submitting form:", error);
   //   alert("Something went wrong!");
   // }
-    navigate('/fileinbox')
+    // navigate('/fileinbox')
 
   }
 
@@ -667,12 +672,18 @@ const handleCancel = async () =>{
 }
 
 
-
+useEffect(() => {
+    if (departments && user?.user?.department) {
+      const userDept = departments.find(
+      (dept) => dept.value === user?.user?.department
+    );
+    console.log('userDept',userDept)
+      setSelectedDepartment(userDept);
+    }
+  }, [user?.user?.department,departments]);
   
 
   
-
-
 
   return (
    <>

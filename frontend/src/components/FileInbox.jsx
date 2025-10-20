@@ -96,7 +96,7 @@ export default function FileInbox() {
       if (departmentId) {
     loadFiles(departmentId);
   }
-   
+       
   }, [])
 
 
@@ -224,7 +224,7 @@ const clearFilter = () =>{
     // setSelectedDepartment(null)
     // setApprovalStatus('')
     // loadFiles('GSO')
-    const defaultDept = 'GSO';
+    const defaultDept = 'OGS';
   const defaultStatus = '';
   const defaultDiv = '';
   const defaultUnit = '';
@@ -446,11 +446,14 @@ useEffect(() => {
       return (
         <tr key={file?.id} onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }}>
           <td>{index + 1}</td>
-          <td>{file?.file_id}</td>
+          <td className={new Date(file?.date_added).toDateString() === new Date().toDateString() ? "highlight-today" : ""}>{file?.file_id}</td>
           <td>{file?.file_name}</td>
           <td>{file?.file_subject}</td>
-          {/* <td>{file.date_added}</td> */}
-          <td>{new Date(file?.date_added).toLocaleString()}</td>
+          {/* <td>{file.date_added}</td> */} 
+          {/* <td>{new Date(file?.date_added).toLocaleString()}</td> */}
+          <td>
+              {new Date(file?.date_added).toLocaleString()}
+          </td>
           {/* <td>{file.inwardnum}</td> */}
           {/* <td>{file.outwardnum}</td> */}
           <td>{file?.receiver}</td>

@@ -80,3 +80,6 @@ button:focus-visible {
   background-color: #f8f9fa;
   border-right: 1px solid #dee2e6;
 }
+.highlight-today{
+  background-color: rgb(215, 235, 81) !important
+}

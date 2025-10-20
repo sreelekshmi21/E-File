@@ -688,7 +688,7 @@ app.get("/api/files", (req, res) => {
   const division = req.query.division;
   const unit = req.query.unit;
 
-  const isGSO = departmentId && departmentId.toUpperCase() === 'GSO';
+  const isGSO = departmentId && departmentId.toUpperCase() === 'OGS';
 
   if (statusParam) {
     // Handle status filtering
@@ -708,7 +708,7 @@ app.get("/api/files", (req, res) => {
     //   query += ` AND department = ?`;
     //   values.push(departmentId);
     // }
-    if (departmentId && departmentId.toUpperCase() !== 'GSO') {
+    if (departmentId && departmentId.toUpperCase() !== 'OGS') {
       query += ` AND department = ?`;
       values.push(departmentId);
    }
