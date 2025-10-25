@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import { getAttachments } from '../utils/dbProvider';
 import Select from 'react-select';
 import { useAuth } from '../context/AuthContext';
+import Profile from './Profile';
 
 
 export default function FileInbox() {
@@ -313,7 +314,7 @@ useEffect(() => {
          
              <Sidebar />
          
-  <div className="col-md-10">        
+  <div className="col-md-9">        
   <div className="card shadow-lg">
     <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
       <h4 className="mb-0">📑 File Register</h4>
@@ -424,7 +425,7 @@ useEffect(() => {
         <thead className="table-dark">
           <tr>
             <th scope="col">#</th>
-            <th scope="col">No.</th>
+            {/* <th scope="col">No.</th> */}
             <th scope="col">File No.</th>
             <th scope="col">File Subject</th>
             <th scope="col">Date Added</th>
@@ -447,7 +448,7 @@ useEffect(() => {
         <tr key={file?.id} onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }}>
           <td>{index + 1}</td>
           <td className={new Date(file?.date_added).toDateString() === new Date().toDateString() ? "highlight-today" : ""}>{file?.file_id}</td>
-          <td>{file?.file_name}</td>
+          {/* <td>{file?.file_name}</td> */}
           <td>{file?.file_subject}</td>
           {/* <td>{file.date_added}</td> */} 
           {/* <td>{new Date(file?.date_added).toLocaleString()}</td> */}
@@ -456,6 +457,7 @@ useEffect(() => {
           </td>
           {/* <td>{file.inwardnum}</td> */}
           {/* <td>{file.outwardnum}</td> */}
+          {console.log('rec===',file?.receiver)}
           <td>{file?.receiver}</td>
           <td>{file?.remarks}</td>
           <td>
@@ -491,6 +493,7 @@ useEffect(() => {
     </div>
   </div>
   </div>
+  <Profile user={user}/>
   {/* <div className="col-md-3">
       ZZZZZZZZZZZZZZZ
   </div> */}

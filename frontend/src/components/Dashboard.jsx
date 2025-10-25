@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
+import Profile from './Profile';
 
 export default function Dashboard() {
 
@@ -79,7 +80,7 @@ export default function Dashboard() {
       <Sidebar />
           
     {/* 👉 Main Dashboard Content */}
-    <div className="col-md-10">
+    <div className="col-md-9">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Dashboard</h2>
         {user?.user?.role == 'admin' && <button className="btn btn-primary" onClick={handleCreateFile}>
@@ -137,6 +138,7 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+    <Profile user={user}/>
   </div>
 </div>
   )

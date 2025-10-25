@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import { getAttachments } from '../utils/dbProvider';
 import { useAuth } from '../context/AuthContext';
 import Select from 'react-select';
+import RemarksEditor from './RemarksEditor';
 
 
 
@@ -168,7 +169,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
     e.preventDefault();
     // navigate('/fileinbox')
     const isEditing = Boolean(fileToEdit?.id);
-     const formData  = new FormData();
+     const formDatas  = new FormData();
     // if (!formData.file_id || !formData.file_subject || !formData.originator || !formData.file_name || !formData.file_recipient || !formData.current_status) {
     //         // alert('All fields are required.');
     //         showToast("All fields are required.", '', "danger");
@@ -176,43 +177,48 @@ const [selectedUnit, setSelectedUnit] = useState('');
     //     }
 
         
-
+          const file_no = document.getElementById('file_no').value
          const file_id = document.getElementById("file_id").value;
-  const file_name = document.getElementById("file_name").value;
+  // const file_name = document.getElementById("file_name").value;
   const file_subject = document.getElementById("file_subject").value;
   // const sender = document.getElementById("sender").value;
-  const receiver = document.getElementById("receiver").value;
+  const receiver = document.getElementById("receiver").value == '' ? selectedDepartment?.value : document.getElementById("receiver").value;
   const date_added = document.getElementById("date_added").value;
   // const inwardnum = document.getElementById("inwardnum").value;
   // const outwardnum = document.getElementById("outwardnum").value;
-  const current_status = document.getElementById("current_status").value;
-  const remarks = document.getElementById("remarks").value;
+  // const current_status = document.getElementById("current_status").value;
+  const remarks = formData?.remarks;
+  
+  console.log('first 11',formData, formData?.remarks)
 
-   if (!file_id || !file_subject || !current_status) {
+   if (!file_id || !file_subject) {
     showToast("All fields are required.", '', "danger");
     return;
   }
 
-  formData.append("file_id", file_id);
-  formData.append("file_name", file_name);
-  formData.append("file_subject", file_subject);
-  // formData.append("sender", sender);
-  formData.append("receiver", receiver);
-  formData.append("date_added", date_added);
-  // formData.append("inwardnum", inwardnum);
-  // formData.append("outwardnum", outwardnum);
-  formData.append("current_status", current_status);
-  formData.append("remarks", remarks);
-  // formData.append("status", "pending");
-  formData.append("status", approvalStatus == undefined ? 'pending' : approvalStatus);
-  formData.append('department',selectedDepartment?.value)
-  formData.append('division',selectedDivision?.value)
-  formData.append('unit',selectedUnit?.value)
+  formDatas.append("file_no", file_no);
+  formDatas.append("file_id", file_id);
+  // formDatas.append("file_name", file_name);
+  formDatas.append("file_subject", file_subject);
+  // formDatas.append("sender", sender);
+  formDatas.append("receiver", receiver);
+  formDatas.append("date_added", date_added);
+  // formDatas.append("inwardnum", inwardnum);
+  // formDatas.append("outwardnum", outwardnum);
+  formDatas.append("current_status", selectedDepartment?.value);
+  formDatas.append("remarks", remarks);
+  // formDatas.append("status", "pending");
+  formDatas.append("status", approvalStatus == undefined ? 'pending' : approvalStatus);
+  formDatas.append('department',selectedDepartment?.value)
+  formDatas.append('division',selectedDivision?.value)
+  formDatas.append('unit',selectedUnit?.value)
+
+  console.log('first',formData.remarks)
 
   // 2. Append one or more files (attachments)
   const files = document.getElementById("file").files; // from file input
   for (let i = 0; i < files.length; i++) {
-    formData.append("file", files[i]); // must match multer field name
+    formDatas.append("file", files[i]); // must match multer field name
   }
 
   const logEditEvent = async (eventType, forwardedTo) => {
@@ -248,7 +254,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
      try {
     const response = await fetch(`http://localhost:5000/createfilewithattachments/${fileToEdit?.id}`, {
       method: "PUT",
-      body: formData
+      body: formDatas
       // NOTE: Don't set Content-Type manually for FormData
     });
 
@@ -261,11 +267,13 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
       setFileId(result.id) //========================
 
+      console.log('fileTpEdit',fileToEdit?.receiver)
       await logEditEvent('edited',fileToEdit?.receiver)
        if (approvalStatus === 'approved') {
         await logEditEvent('approved', fileToEdit?.receiver);
       }
 
+      navigate('/fileinbox')
     } else {
       alert("Error: " + result.error);
     }
@@ -276,14 +284,14 @@ const [selectedUnit, setSelectedUnit] = useState('');
   // logEditEvent()
   }
   else{
-    console.log('formData',formData)
-    for (const [key, value] of formData.entries()) {
+    console.log('formData final',formData)
+    for (const [key, value] of formDatas.entries()) {
      console.log(`${key}: ${value}`);
   }
      try {
     const response = await fetch("http://localhost:5000/createfilewithattachments", {
       method: "POST",
-      body: formData
+      body: formDatas
       // NOTE: Don't set Content-Type manually for FormData
     });
 
@@ -385,10 +393,12 @@ const [selectedUnit, setSelectedUnit] = useState('');
     // e.preventDefault();
     navigate('/filetimeline', {state: {
         fileId: file?.id,
-        fileName: file?.file_name
+        fileName: file?.file_id
       }})
     }
 
+
+    console.log('first formdata',formData)
   
 
   const handleUpload = async () => {
@@ -633,14 +643,14 @@ useEffect(() => {
 
 
   useEffect(() => {
-    if (selectedDepartment?.value && selectedDivision?.value && selectedUnit?.value && formData?.file_id) {
+    if (selectedDepartment?.value && selectedDivision?.value && selectedUnit?.value && formData?.file_no) {
       const dt = new Date().getFullYear()
-      const generatedName = `${selectedDepartment?.value}/${selectedDivision?.value}/${selectedUnit?.value}/${formData?.file_id}/${dt}`;
+      const generatedName = `${selectedDepartment?.value}/${selectedDivision?.value}/${selectedUnit?.value}/${formData?.file_no}/${dt}`;
       setFileName(generatedName);
     } else {
       setFileName('');
     }
-  }, [selectedDepartment?.value, selectedDivision?.value, selectedUnit?.value, formData?.file_id]);
+  }, [selectedDepartment?.value, selectedDivision?.value, selectedUnit?.value, formData?.file_no]);
 
 
 
@@ -786,8 +796,8 @@ useEffect(() => {
 </select> */}
         </div>
         <div className="col-md-6 d-flex align-items-center gap-2">
-          <label className="form-label mb-0" htmlFor="file_id">No.:</label>
-          <input type="text" name="file_id" id="file_id" className="form-control" value={formData.file_id} onChange={handleChange} disabled={viewMode}/>
+          <label className="form-label mb-0" htmlFor="file_no">No.:</label>
+          <input type="text" name="file_no" id="file_no" className="form-control" value={formData?.file_no} onChange={handleChange} disabled={viewMode}/>
         </div>
         </div>
         <div className="row mb-3">
@@ -799,8 +809,8 @@ useEffect(() => {
         </div>
          <div className="row mb-3">
         <div className="col-md-12 d-flex align-items-center gap-2">
-          <label className="form-label mb-0" htmlFor="file_name">File Number:</label>
-          <input type="text" name="file_name" id="file_name" className="form-control" value={fileName} 
+          <label className="form-label mb-0" htmlFor="file_id">File Number:</label>
+          <input type="text" name="file_id" id="file_id" className="form-control" value={fileName} 
           onChange={handleChange} 
           disabled={true}/>
         </div>
@@ -841,7 +851,15 @@ useEffect(() => {
     </div>
     <div className="col-md-6 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="current_status">Live File Location:</label>
-      <input type="text" name="current_status" id="current_status" className="form-control" value={formData.current_status} onChange={handleChange} disabled={viewMode}/>
+      {/* <input type="text" name="current_status" id="current_status" className="form-control" value={formData.current_status} onChange={handleChange} disabled={viewMode}/> */}
+      <Select
+                  options={departments}
+                  value={selectedDepartment}
+                  onChange={(selectedOption) => setSelectedDepartment(selectedOption)}
+                  isSearchable={true}
+                  isDisabled={true}
+                  placeholder="Live File Location"
+                /> 
     </div>
   </div>
   {/* <div className="row mb-3">
@@ -866,7 +884,11 @@ useEffect(() => {
   <div className="row mb-3">
     <div className="col-md-12">
       <label className="form-label" htmlFor="remarks">Note File:</label>
-      <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea>
+      {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
+      <RemarksEditor formData={formData} setFormData={setFormData}
+            viewMode={viewMode} />
+      {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
+        viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/> */}
     </div>
   </div>
 

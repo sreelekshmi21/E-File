@@ -26,6 +26,9 @@ export default function Sidebar() {
           <Link className="nav-link" to='/fileinbox'>Inbox</Link>
         </li>
         <li className="nav-item">
+          <Link className="nav-link" to='/adminpanel'>Admin Panel</Link>
+        </li>
+        <li className="nav-item">
       <button
         className="nav-link btn btn-link w-100 text-start"
         style={{

@@ -164,21 +164,14 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
   return (
     <>
      <div style={{ maxWidth: "900px", margin: "auto", padding: "20px" }}>
-      <h2>Document Editor</h2>
+      {/* <h2>Document Editor</h2> */}
 
       <Editor
         // onInit={(evt, editor) => (editorRef.current = editor)}
         onInit={(evt, editor) => {
         editorRef.current = editor;
         // Register custom button
-        editor.ui.registry.addButton('attachFileButton', {
-          text: 'Attach File', // 👈 will show button text
-          tooltip: 'Upload and attach file',
-          onAction: () => {
-            // alert('File upload logic here!');
-             fileInputRef.current.click();  // Trigger file picker dialog
-          },
-        });
+        
       }}
         initialValue=""
         apiKey="54ugn72qi4pzas32feag7mcosn0lftniz5opr5mf8qaqnh1c"

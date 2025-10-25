@@ -482,7 +482,8 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
     status,
     department,
     division,
-    unit
+    unit,
+    file_no
   } = req.body;
 
   const attachments = req.files;
@@ -494,15 +495,15 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
   // Insert into files table
   const insertFileQuery = `
     INSERT INTO files (
-      file_id, file_name, file_subject, receiver, date_added,
-      current_status, remarks, status,department,division,unit
+      file_id, file_subject, receiver, date_added,
+      current_status, remarks, status,department,division,unit,file_no
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?,?)
   `;
 
   const fileValues = [
     file_id,
-    file_name,
+    // file_name,
     file_subject,
     // sender,
     receiver,
@@ -514,7 +515,8 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
     status,
     department,
     division,
-    unit
+    unit,file_no
+    
   ];
 
   db.query(insertFileQuery, fileValues, (fileErr, fileResult) => {
@@ -588,7 +590,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
   const attachments = req.files;
 
   // ✅ Basic validation
-  if (!file_name || !receiver) {
+  if (!receiver) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -596,7 +598,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
   const updateFileQuery = `
     UPDATE files
     SET 
-      file_name = ?, 
+       
       file_subject = ?,
       receiver = ?, 
       date_added = ?, 
@@ -610,7 +612,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
   `;
 
   const updateFileValues = [
-    file_name,
+    // file_name,
     file_subject,
     receiver,
     // updatedDate,
@@ -702,8 +704,9 @@ app.get("/api/files", (req, res) => {
 
     const placeholders = filteredStatuses.map(() => '?').join(', ');
     let query = `SELECT * FROM files WHERE LOWER(status) IN (${placeholders})`;
+    
     const values = [...filteredStatuses];
-
+   
     // if (!isGSO) {
     //   query += ` AND department = ?`;
     //   values.push(departmentId);
@@ -711,6 +714,7 @@ app.get("/api/files", (req, res) => {
     if (departmentId && departmentId.toUpperCase() !== 'OGS') {
       query += ` AND department = ?`;
       values.push(departmentId);
+      
    }
 
     if (division) {
@@ -724,6 +728,8 @@ app.get("/api/files", (req, res) => {
     }
 
     query += ` AND status IS NOT NULL ORDER BY date_added DESC`;
+
+    
 
     console.log('Filtered Query:', query);
     console.log('Query Values:', values);
@@ -741,11 +747,12 @@ app.get("/api/files", (req, res) => {
     let query = `SELECT * FROM files`;
     const values = [];
 
-    const conditions = [];
+    const conditions = []
 
     if (!isGSO) {
       conditions.push(`department = ?`);
       values.push(departmentId);
+     
     }
 
     if (division) {

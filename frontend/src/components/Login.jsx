@@ -107,14 +107,14 @@ export default function Login() {
             Login
           </button>
         </form>
-        <div className="text-center mt-3">
+        {/* <div className="text-center mt-3">
           <small>
             Don’t have an account?{" "}
             <nav><ul><li>
                   <Link to='/signup'>Sign Up</Link> 
                       </li></ul></nav>
           </small>
-        </div>
+        </div> */}
       </div>
       
       {/* <Toast
