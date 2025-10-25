@@ -1270,3 +1270,46 @@ app.use((req, res, next) => {
   console.log("Unknown route:", req.method, req.url);
   res.status(404).send("Not Found");
 });
+
+
+async function generateFileNumber() {
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Increment the counter atomically
+    await connection.query(`
+      UPDATE file_counter
+      SET count = count + 1
+      WHERE name = 'fileNumber'
+    `);
+
+    // Get the updated count
+    const [rows] = await connection.query(`
+      SELECT count FROM file_counter WHERE name = 'fileNumber'
+    `);
+
+    const newCount = rows[0].count;
+
+    // Format the number as 2 digits (01, 02, 03, ...)
+    const formattedNumber = String(newCount).padStart(2, '0');
+
+    await connection.commit();
+    return formattedNumber;
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
+(async () => {
+  try {
+    const newNumber = await generateFileNumber();
+    console.log('Generated File Number:', newNumber);
+  } catch (error) {
+    console.error('Error generating file number:', error);
+  }
+})();
