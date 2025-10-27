@@ -19,6 +19,8 @@ export default function CreateFile() {
 
    const { user } = useAuth();
 
+   const [fileNumber, setFileNumber] = useState("");
+
   const [fileId, setFileId] = useState(null)
 
   const [departments, setDepartments] = useState([])
@@ -112,7 +114,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
  const [loading, setLoading] = useState(false);
 
 
- useEffect(() => {
+  useEffect(() => {
   const getDepartments = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/departments');
@@ -130,7 +132,22 @@ const [selectedUnit, setSelectedUnit] = useState('');
   };
 
   getDepartments();
-}, []);
+
+  // Fetch preview of next file number for new files (not when editing)
+  if (!fileToEdit?.id) {
+    const fetchNextFileNumber = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/next-file-number");
+        const data = await response.json();
+        setFileNumber(data?.fileNumber);
+      } catch (err) {
+        console.error("Error fetching next file number:", err);
+      }
+    };
+
+    fetchNextFileNumber();
+  }
+}, [fileToEdit?.id]);
  
 
 
@@ -176,9 +193,31 @@ const [selectedUnit, setSelectedUnit] = useState('');
     //         return;
     //     }
 
+    // Use the preview file number for new files, or existing number for editing
+    let file_no = document.getElementById('file_no').value;
+    if (!isEditing) {
+      // For new files, use the preview number and increment the counter
+      try {
+        const response = await fetch("http://localhost:5000/api/generate-file-number", {
+          method: "POST"
+        });
+        const data = await response.json();
+        file_no = data?.fileNumber;
+        setFileNumber(file_no);
         
-          const file_no = document.getElementById('file_no').value
-         const file_id = document.getElementById("file_id").value;
+        // Generate file name after getting file number
+        const generatedFileName = generateFileName();
+        if (generatedFileName) {
+          setFileName(generatedFileName);
+        }
+      } catch (err) {
+        console.error("Error generating file number:", err);
+        showToast("Error generating file number", '', "danger");
+        return;
+      }
+    }
+        
+         const file_id = fileName || document.getElementById("file_id").value;
   // const file_name = document.getElementById("file_name").value;
   const file_subject = document.getElementById("file_subject").value;
   // const sender = document.getElementById("sender").value;
@@ -643,14 +682,31 @@ useEffect(() => {
 
 
   useEffect(() => {
-    if (selectedDepartment?.value && selectedDivision?.value && selectedUnit?.value && formData?.file_no) {
-      const dt = new Date().getFullYear()
-      const generatedName = `${selectedDepartment?.value}/${selectedDivision?.value}/${selectedUnit?.value}/${formData?.file_no}/${dt}`;
-      setFileName(generatedName);
+    // For existing files, use the existing file_id
+    if (fileToEdit?.id) {
+      setFileName(fileToEdit?.file_id || '');
     } else {
-      setFileName('');
+      // For new files, generate file name when all required fields are selected and file number is available
+      if (selectedDepartment?.value && selectedDivision?.value && selectedUnit?.value && fileNumber) {
+        const dt = new Date().getFullYear()
+        const generatedName = `${selectedDepartment?.value}/${selectedDivision?.value}/${selectedUnit?.value}/${fileNumber}/${dt}`;
+        setFileName(generatedName);
+      } else {
+        setFileName('');
+      }
     }
-  }, [selectedDepartment?.value, selectedDivision?.value, selectedUnit?.value, formData?.file_no]);
+  }, [selectedDepartment?.value, selectedDivision?.value, selectedUnit?.value, fileNumber, fileToEdit?.id]);
+
+  // Generate file name when file number is available
+  const generateFileName = () => {
+    if (selectedDepartment?.value && selectedDivision?.value && selectedUnit?.value && fileNumber) {
+      const dt = new Date().getFullYear()
+      const generatedName = `${selectedDepartment?.value}/${selectedDivision?.value}/${selectedUnit?.value}/${fileNumber}/${dt}`;
+      setFileName(generatedName);
+      return generatedName;
+    }
+    return '';
+  };
 
 
 
@@ -797,7 +853,7 @@ useEffect(() => {
         </div>
         <div className="col-md-6 d-flex align-items-center gap-2">
           <label className="form-label mb-0" htmlFor="file_no">No.:</label>
-          <input type="text" name="file_no" id="file_no" className="form-control" value={formData?.file_no} onChange={handleChange} disabled={viewMode}/>
+          <input type="text" name="file_no" id="file_no" className="form-control" value={fileNumber} readOnly />
         </div>
         </div>
         <div className="row mb-3">

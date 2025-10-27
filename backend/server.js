@@ -1260,20 +1260,23 @@ app.get("/api/file-events/:fileId", (req, res) => {
 
 
 
-app.listen(PORT, () => {
-  console.log(`Backend running on http://localhost:${PORT}`);
+
+
+
+
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'file_register_db'
 });
 
+const dbPromise1 = pool.promise();
 
-
-app.use((req, res, next) => {
-  console.log("Unknown route:", req.method, req.url);
-  res.status(404).send("Not Found");
-});
 
 
 async function generateFileNumber() {
-  const connection = await db.getConnection();
+  const connection = await dbPromise1.getConnection();
 
   try {
     await connection.beginTransaction();
@@ -1282,12 +1285,12 @@ async function generateFileNumber() {
     await connection.query(`
       UPDATE file_counter
       SET count = count + 1
-      WHERE name = 'fileNumber'
+      WHERE department = 'GLOBAL'
     `);
 
     // Get the updated count
     const [rows] = await connection.query(`
-      SELECT count FROM file_counter WHERE name = 'fileNumber'
+      SELECT count FROM file_counter WHERE department = 'GLOBAL'
     `);
 
     const newCount = rows[0].count;
@@ -1305,11 +1308,102 @@ async function generateFileNumber() {
   }
 }
 
-(async () => {
+// Function to get current file number without incrementing
+async function getCurrentFileNumber() {
+  const connection = await dbPromise1.getConnection();
+
   try {
-    const newNumber = await generateFileNumber();
-    console.log('Generated File Number:', newNumber);
-  } catch (error) {
-    console.error('Error generating file number:', error);
+    const [rows] = await connection.query(`
+      SELECT count FROM file_counter WHERE department = 'GLOBAL'
+    `);
+
+    if (rows.length === 0) {
+      // If no record exists, create one
+      await connection.query(`
+        INSERT INTO file_counter (department, count) VALUES ('GLOBAL', 0)
+      `);
+      return '01';
+    }
+
+    const currentCount = rows[0].count;
+    const nextNumber = currentCount + 1;
+    const formattedNumber = String(nextNumber).padStart(2, '0');
+    
+    return formattedNumber;
+  } catch (err) {
+    throw err;
+  } finally {
+    connection.release();
   }
-})();
+}
+
+// (async () => {
+//   try {
+//     const newNumber = await generateFileNumber();
+//     console.log('Generated File Number:', newNumber);
+//   } catch (error) {
+//     console.error('Error generating file number:', error);
+//   }
+// })();
+// API endpoint - generates file number immediately (for backward compatibility)
+app.get("/api/file-number", async (req, res) => {
+  try {
+    const fileNumber = await generateFileNumber();
+    res.json({ fileNumber });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to generate file number" });
+  }
+});
+
+// New API endpoint - generates file number only when actually needed
+app.post("/api/generate-file-number", async (req, res) => {
+  try {
+    const fileNumber = await generateFileNumber();
+    res.json({ fileNumber });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to generate file number" });
+  }
+});
+
+// API endpoint - shows next file number without incrementing (for preview)
+app.get("/api/next-file-number", async (req, res) => {
+  try {
+    const fileNumber = await getCurrentFileNumber();
+    console.log('Preview file number:', fileNumber);
+    res.json({ fileNumber });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to get next file number" });
+  }
+});
+
+// Debug endpoint to check current counter value
+app.get("/api/debug-counter", async (req, res) => {
+  try {
+    const connection = await dbPromise1.getConnection();
+    const [rows] = await connection.query(`
+      SELECT count FROM file_counter WHERE department = 'GLOBAL'
+    `);
+    connection.release();
+    
+    const currentCount = rows.length > 0 ? rows[0].count : 'No record found';
+    console.log('Current counter value:', currentCount);
+    res.json({ currentCount, nextNumber: currentCount + 1 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to get counter value" });
+  }
+});
+
+
+
+app.use((req, res, next) => {
+  console.log("Unknown route:", req.method, req.url);
+  res.status(404).send("Not Found");
+});
+
+app.listen(PORT, () => {
+  console.log(`Backend running on http://localhost:${PORT}`);
+});
