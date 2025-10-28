@@ -27,6 +27,8 @@ export default function CreateFile() {
 
    const [selectedDepartment, setSelectedDepartment] = useState(null);
 
+   const [selectedReceiver, setSelectedReceiver] = useState(null);
+
    const [divisions, setDivisions] = useState([]);
 
    const [units, setUnits] = useState([]);
@@ -104,6 +106,10 @@ const [selectedUnit, setSelectedUnit] = useState('');
       if(fileToEdit?.unit && units.length > 0){
         const unitOption = units.find(u => u.value === fileToEdit?.unit)
         setSelectedUnit(unitOption)
+      }
+      if(fileToEdit?.receiver && departments.length > 0){
+        const deptOption = departments.find(dept => dept.value === fileToEdit?.receiver)
+        setSelectedReceiver(deptOption)
       }
     // fetchAttachments(dat)
   }, [fileToEdit, data, viewMode, departments, divisions,units]) // only run this effect when `dat` changes
@@ -221,7 +227,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   // const file_name = document.getElementById("file_name").value;
   const file_subject = document.getElementById("file_subject").value;
   // const sender = document.getElementById("sender").value;
-  const receiver = document.getElementById("receiver").value == '' ? selectedDepartment?.value : document.getElementById("receiver").value;
+  // const receiver = document.getElementById("receiver").value == '' ? selectedDepartment?.value : document.getElementById("receiver").value;
   const date_added = document.getElementById("date_added").value;
   // const inwardnum = document.getElementById("inwardnum").value;
   // const outwardnum = document.getElementById("outwardnum").value;
@@ -240,7 +246,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   // formDatas.append("file_name", file_name);
   formDatas.append("file_subject", file_subject);
   // formDatas.append("sender", sender);
-  formDatas.append("receiver", receiver);
+  formDatas.append("receiver", selectedReceiver?.value);
   formDatas.append("date_added", date_added);
   // formDatas.append("inwardnum", inwardnum);
   // formDatas.append("outwardnum", outwardnum);
@@ -348,7 +354,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
         file_id: fid,
         user_id: user?.user?.id,
         origin: selectedDepartment?.value || '',
-        forwarded_to: receiver,
+        forwarded_to: selectedReceiver?.value || '',
         approved_by: '',
         edited_by: ''
      };
@@ -373,7 +379,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
     }
   } catch (err) {
     console.error("Request error:", err);
-    alert("Failed to upload file.");
+    alert("Failed to upload file.",err);
   }
   }
 
@@ -1001,7 +1007,15 @@ useEffect(() => {
     <div className="row mb-3">
         <div className="col-md-12 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="receiver">Forwarded To:</label>
-      <input type="text" name="receiver" id="receiver" className="form-control" value={formData?.receiver} onChange={handleChange} disabled={viewMode}/>
+      {/* <input type="text" name="receiver" id="receiver" className="form-control" value={formData?.receiver} onChange={handleChange} disabled={viewMode}/> */}
+      <Select
+                  options={departments}
+                  name="receiver"
+                  value={selectedReceiver}
+                  onChange={(selectedOption) => setSelectedReceiver(selectedOption)}
+                  isSearchable={true}
+                  placeholder="Search or Select Department"
+                /> 
     </div>
    </div> 
    {/* {fileToEdit?.id && user?.user?.role === 'admin' && <button 

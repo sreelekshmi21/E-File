@@ -682,40 +682,149 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
 
 
 //new
+// app.get("/api/files", (req, res) => {
+//   console.log("API /api/files called with query:", req.query);
+  
+//   const statusParam = req.query.status;
+//   const departmentId = req.query.department;
+//   const division = req.query.division;
+//   const unit = req.query.unit;
+
+//   const isGSO = departmentId && departmentId.toUpperCase() === 'OGS';
+
+//   if (statusParam) {
+//     // Handle status filtering
+//     const statuses = statusParam.split(',').map(s => s.trim().toLowerCase());
+//     const allowedStatuses = ['pending', 'approved', 'rejected', 'completed', 'failed'];
+//     const filteredStatuses = statuses.filter(s => allowedStatuses.includes(s));
+
+//     if (filteredStatuses.length === 0) {
+//       return res.status(400).json({ error: "No valid status values provided" });
+//     }
+
+//     const placeholders = filteredStatuses.map(() => '?').join(', ');
+//     let query = `SELECT * FROM files WHERE LOWER(status) IN (${placeholders})`;
+    
+//     const values = [...filteredStatuses];
+   
+//     // if (!isGSO) {
+//     //   query += ` AND department = ?`;
+//     //   values.push(departmentId);
+//     // }
+//     if (departmentId && departmentId.toUpperCase() !== 'OGS') {
+//       query += ` AND department = ?`;
+//       values.push(departmentId);
+      
+//    }
+
+//     if (division) {
+//       query += ` AND division = ?`;
+//       values.push(division);
+//     }
+
+//     if (unit) {
+//       query += ` AND unit = ?`;
+//       values.push(unit);
+//     }
+
+//     query += ` AND status IS NOT NULL ORDER BY date_added DESC`;
+
+    
+
+//     console.log('Filtered Query:', query);
+//     console.log('Query Values:', values);
+
+//     db.query(query, values, (err, results) => {
+//       if (err) {
+//         console.error("Database error:", err);
+//         return res.status(500).json({ error: "Database error" });
+//       }
+//       res.json(results);
+//     });
+
+//   } else {
+//     // No status filtering
+//     let query = `SELECT * FROM files`;
+//     const values = [];
+
+//     const conditions = []
+
+//     if (!isGSO) {
+//       conditions.push(`department = ?`);
+//       values.push(departmentId);
+     
+//     }
+
+//     if (division) {
+//       conditions.push(`division = ?`);
+//       values.push(division);
+//     }
+
+//      if (unit) {
+//       conditions.push(`unit = ?`);
+//       values.push(unit);
+//     }
+
+//      if (conditions.length > 0) {
+//       query += ` WHERE ` + conditions.join(' AND ');
+//     }
+
+
+//     query += ` ORDER BY date_added DESC`;
+
+//     console.log("Query for all files:", query);
+//     console.log("Values==:", values);
+
+//     db.query(query, values, (err, results) => {
+//       if (err) {
+//         console.error("Error fetching files:", err);
+//         return res.status(500).json({ error: "Database error" });
+//       }
+//       res.json(results);
+//     });
+//   }
+// });
 app.get("/api/files", (req, res) => {
   console.log("API /api/files called with query:", req.query);
   
   const statusParam = req.query.status;
-  const departmentId = req.query.department;
+  const departmentId = req.query.department; // logged-in department
   const division = req.query.division;
   const unit = req.query.unit;
 
-  const isGSO = departmentId && departmentId.toUpperCase() === 'OGS';
+  const isGSO = departmentId && departmentId.toUpperCase() === "OGS";
 
+  // ✅ Helper to run final query
+  const executeQuery = (query, values) => {
+    console.log("Final Query:", query);
+    console.log("Values:", values);
+    db.query(query, values, (err, results) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+      res.json(results);
+    });
+  };
+
+  // ✅ STATUS FILTER CASE
   if (statusParam) {
-    // Handle status filtering
-    const statuses = statusParam.split(',').map(s => s.trim().toLowerCase());
+    const statuses = statusParam.split(",").map(s => s.trim().toLowerCase());
     const allowedStatuses = ['pending', 'approved', 'rejected', 'completed', 'failed'];
     const filteredStatuses = statuses.filter(s => allowedStatuses.includes(s));
 
     if (filteredStatuses.length === 0) {
-      return res.status(400).json({ error: "No valid status values provided" });
+      return res.status(400).json({ error: "Invalid status value" });
     }
 
-    const placeholders = filteredStatuses.map(() => '?').join(', ');
-    let query = `SELECT * FROM files WHERE LOWER(status) IN (${placeholders})`;
-    
+    let query = `SELECT * FROM files WHERE LOWER(status) IN (${filteredStatuses.map(() => '?').join(', ')})`;
     const values = [...filteredStatuses];
-   
-    // if (!isGSO) {
-    //   query += ` AND department = ?`;
-    //   values.push(departmentId);
-    // }
-    if (departmentId && departmentId.toUpperCase() !== 'OGS') {
-      query += ` AND department = ?`;
-      values.push(departmentId);
-      
-   }
+
+    // ✅ Show created OR addressed files (except GSO)
+    if (!isGSO) {
+      query += ` AND (department = ? OR receiver = ?)`;
+      values.push(departmentId, departmentId);
+    }
 
     if (division) {
       query += ` AND division = ?`;
@@ -727,62 +836,36 @@ app.get("/api/files", (req, res) => {
       values.push(unit);
     }
 
-    query += ` AND status IS NOT NULL ORDER BY date_added DESC`;
-
-    
-
-    console.log('Filtered Query:', query);
-    console.log('Query Values:', values);
-
-    db.query(query, values, (err, results) => {
-      if (err) {
-        console.error("Database error:", err);
-        return res.status(500).json({ error: "Database error" });
-      }
-      res.json(results);
-    });
-
-  } else {
-    // No status filtering
-    let query = `SELECT * FROM files`;
-    const values = [];
-
-    const conditions = []
-
-    if (!isGSO) {
-      conditions.push(`department = ?`);
-      values.push(departmentId);
-     
-    }
-
-    if (division) {
-      conditions.push(`division = ?`);
-      values.push(division);
-    }
-
-     if (unit) {
-      conditions.push(`unit = ?`);
-      values.push(unit);
-    }
-
-     if (conditions.length > 0) {
-      query += ` WHERE ` + conditions.join(' AND ');
-    }
-
-
     query += ` ORDER BY date_added DESC`;
-
-    console.log("Query for all files:", query);
-    console.log("Values==:", values);
-
-    db.query(query, values, (err, results) => {
-      if (err) {
-        console.error("Error fetching files:", err);
-        return res.status(500).json({ error: "Database error" });
-      }
-      res.json(results);
-    });
+    return executeQuery(query, values);
   }
+
+  // ✅ NO STATUS FILTER CASE
+  let query = `SELECT * FROM files`;
+  const conditions = [];
+  const values = [];
+
+  if (!isGSO) {
+    conditions.push(`(department = ? OR receiver = ?)`);
+    values.push(departmentId, departmentId);
+  }
+
+  if (division) {
+    conditions.push(`division = ?`);
+    values.push(division);
+  }
+
+  if (unit) {
+    conditions.push(`unit = ?`);
+    values.push(unit);
+  }
+
+  if (conditions.length > 0) {
+    query += ` WHERE ` + conditions.join(" AND ");
+  }
+
+  query += ` ORDER BY date_added DESC`;
+  return executeQuery(query, values);
 });
 
 

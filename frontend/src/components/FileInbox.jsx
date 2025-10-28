@@ -60,7 +60,7 @@ export default function FileInbox() {
 
     console.log("API Request Params:", params.toString());
 
-    const response = await fetch(`http://localhost:5000/api/files?${params.toString()}`);
+    const response = await fetch(`http://localhost:5000/api/files?${params.toString()}&userId=${user?.user?.id}`);
     const data = await response.json();
     console.log('Fetched data:', data);
     setFiles(data);
