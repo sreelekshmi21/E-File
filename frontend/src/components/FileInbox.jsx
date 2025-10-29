@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import DeleteModal from './DeleteModal';
 import { useToast } from '../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
@@ -35,6 +35,10 @@ export default function FileInbox() {
       const navigate = useNavigate()
 
      const { showToast } = useToast();
+
+	    // Track previous file IDs to detect newly received files
+	    const prevFileIdsRef = useRef(new Set());
+	    const pollingInitializedRef = useRef(false);
 
      const handleApprovalStatusChange = (e) => {
     setApprovalStatus(e.target.value);
@@ -139,6 +143,11 @@ export default function FileInbox() {
       String(val).toLowerCase().includes(search.toLowerCase())
     )
   );
+  // const today = new Date();
+  // const filteredFiles = filteredFiless.filter(file => {
+  //           const fileDate = new Date(file.date);
+  //           return fileDate.toDateString() === today.toDateString();
+  //       });
 
 
   // const getAttachments = async (fileId) =>{
@@ -240,6 +249,69 @@ const clearFilter = () =>{
 
 
 
+// Background polling to detect new files and notify the user
+useEffect(() => {
+	const userId = user?.user?.id;
+	if (!userId) return;
+
+	const buildParams = () => {
+		const params = new URLSearchParams();
+		// Fallback to user's department if none selected so list doesn't clear
+		const dept = selectedDepartment?.value || user?.user?.department;
+		if (dept) params.append('department', dept);
+		if (selectedDivision?.value) params.append('division', selectedDivision.value);
+		if (selectedUnit?.value) params.append('unit', selectedUnit.value);
+		if (approvalStatus) params.append('status', approvalStatus);
+		params.append('userId', userId);
+		return params.toString();
+	};
+
+	let isCancelled = false;
+
+	const fetchAndNotify = async () => {
+		try {
+			const query = buildParams();
+			console.log('[Inbox Polling] requesting: /api/files?' + query);
+			const response = await fetch(`http://localhost:5000/api/files?${query}`);
+			if (!response.ok) {
+				console.error('Polling fetch failed with status:', response.status);
+				return;
+			}
+			const data = await response.json();
+			if (isCancelled || !Array.isArray(data)) return;
+
+			const currentIds = new Set(data.map(f => f?.id));
+			if (pollingInitializedRef.current) {
+				let newCount = 0;
+				for (const file of data) {
+					if (!prevFileIdsRef.current.has(file?.id)) newCount += 1;
+				}
+				if (newCount > 0) {
+					console.log(`[Inbox Polling] ${newCount} new files received`);
+					showToast(`${newCount} new files received`, '', 'success');
+				}
+			}
+
+			prevFileIdsRef.current = currentIds;
+			pollingInitializedRef.current = true;
+			setFiles(data);
+		} catch (err) {
+			console.error('Polling error loading files:', err);
+		}
+	};
+
+	// Run immediately so users don't have to wait for the first interval
+	fetchAndNotify();
+
+	// Then continue polling
+	const intervalId = setInterval(fetchAndNotify, 5000); // 5 seconds
+
+	return () => {
+		isCancelled = true;
+		clearInterval(intervalId);
+	};
+}, [selectedDepartment?.value, selectedDivision?.value, selectedUnit?.value, approvalStatus, user?.user?.id]);
+
 useEffect(() => {
   const fetchDivisions = async () => {
     if (!selectedDepartment) {
@@ -305,6 +377,13 @@ useEffect(() => {
   fetchUnits();
 }, [selectedDivision?.id]);
 
+
+const isOverdue = (receivedAt) => {
+  const now = new Date();             // current time
+  const received = new Date(receivedAt); // time when file was received
+  const hoursPassed = (now - received) / (1000 * 60 * 60); // milliseconds → hours
+  return hoursPassed > 24;            // true if more than 24 hours old
+};
 
 
   return (
@@ -434,7 +513,8 @@ useEffect(() => {
               <th scope="col">Live File Location</th>
                <th scope="col">Remarks</th>
             <th scope="col">Status</th>
-            {/* <th scope="col">Action</th> */}
+            <th></th>
+            {user?.user?.role == 'admin' && <th scope="col">Action</th>}
           </tr>
         </thead>
         <tbody id="fileTableBody">
@@ -445,9 +525,9 @@ useEffect(() => {
       if (file.status === "rejected") badgeClass = "bg-danger";
 
       return (
-        <tr key={file?.id} onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }}>
+        <tr key={file?.id}>
           <td>{index + 1}</td>
-          <td className={new Date(file?.date_added).toDateString() === new Date().toDateString() ? "highlight-today" : ""}>{file?.file_id}</td>
+          <td onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }} className={new Date(file?.date_added).toDateString() === new Date().toDateString() ? "highlight-today" : ""}>{file?.file_id}</td>
           {/* <td>{file?.file_name}</td> */}
           <td>{file?.file_subject}</td>
           {/* <td>{file.date_added}</td> */} 
@@ -462,22 +542,23 @@ useEffect(() => {
           <td>{file?.remarks}</td>
           <td>
             <span className={`badge ${badgeClass}`}>
-              {file?.status}
+              {file?.status}              
             </span>
           </td>
-          {/* <td>
-            <button 
+          <td>{file?.status !== 'approved' && isOverdue(file.date_added) && <span style={{ color: "red" }}>🚩</span>}</td>
+          {user?.user?.role == 'admin' && <td>
+            {/* <button 
             className="btn btn-sm btn-primary"
             onClick={() => handleViewClick(file?.id)}>View</button>
             <button className="btn btn-sm btn-warning mx-1"
                     onClick={() => handleEditClick(file?.id)}
-            >Edit</button>
+            >Edit</button> */}
             <button
               className="btn btn-sm btn-danger"
                onClick={() => handleDeleteClick(file?.id)}>
               Delete
             </button>
-          </td> */}
+          </td>}
         </tr>
       );
     })}

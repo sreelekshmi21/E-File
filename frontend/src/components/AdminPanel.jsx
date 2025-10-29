@@ -18,6 +18,10 @@ export default function AdminPanel() {
         <p>Here you can manage users, documents, and notifications.</p>
         <p><Link to='/signup'>Add User</Link></p>
       </div>
+      <div className="card p-3 shadow-sm">
+        <h5>USERS LIST</h5>
+        <p><Link to='/users'>Users List</Link></p>
+      </div>
     </div>
   </div>
 </div>

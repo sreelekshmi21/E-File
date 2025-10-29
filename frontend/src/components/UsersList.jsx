@@ -1,0 +1,80 @@
+import React from 'react'
+import { useState } from 'react';
+import { useEffect } from 'react';
+import Sidebar from './Sidebar';
+
+export default function UsersList() {
+
+    const [users, setUsers] = useState([])
+
+    useEffect(() => {
+     const getUsers = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/users');
+      const data = await response.json(); // ✅ parse response as JSON
+      console.log('users:', response,data);
+      setUsers(data)
+      
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  };
+  getUsers()
+    }, [])
+
+
+    const handleDelete = async (id) => {
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message);
+        // Remove deleted user from list
+        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== id));
+      } else {
+        alert(data.message || "Failed to delete user");
+      }
+    } catch (err) {
+      console.error("Error deleting user:", err);
+    }
+  };
+
+    
+  return (
+    <>
+    <Sidebar />
+    <div>UsersList</div>
+    {users?.length > 0 ? (<div className='col-md-10'><table border="1" style={{ width: "100%", borderCollapse: "collapse" }}>
+    <thead>
+      <tr style={{ backgroundColor: "#f2f2f2" }}>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Department</th>
+        <th>Role</th>
+      </tr>
+    </thead>
+    <tbody>
+      {users.map((user) => (
+        <tr key={user.id}>
+          <td>{user.username}</td>
+          <td>{user.email}</td>
+          <td>{user.department}</td>
+          <td>{user.role}</td>
+          <td><button onClick={() => handleDelete(user?.id)}>DELETE</button></td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  </div>
+
+) : (
+  <p>No users found</p>
+)}
+    </>
+  )
+}
