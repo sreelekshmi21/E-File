@@ -10,14 +10,15 @@ export default function Toast({ show, title, body, onClose, variant = "success"}
 
   if (!show) return null;
 
+  const bgClass = variant === 'success' ? 'bg-success' : variant === 'danger' ? 'bg-danger' : 'bg-info';
+
   return (
     <div
-      // className="toast show text-bg-success border-0 position-fixed top-50 start-50 translate-middle"
-       className={`toast show text-white border-0 position-fixed top-50 start-50 translate-middle bg-${variant}`}
+      className={`toast show text-white border-0 position-fixed top-0 start-50 translate-middle-x ${bgClass}`}
       role="alert"
       aria-live="assertive"
       aria-atomic="true"
-      style={{ zIndex: 1055 }}
+      style={{ zIndex: 1055, marginTop: '20px' }}
     >
       <div className="d-flex">
         <div className="toast-body">
