@@ -31,6 +31,7 @@ export default function FileInbox() {
       const [selectedUnit, setSelectedUnit] = useState('');
 
       const [approvalStatus, setApprovalStatus] = useState('');
+	  const [appliedFilters, setAppliedFilters] = useState({ department: '', division: '', unit: '', status: '' });
 
       const navigate = useNavigate()
 
@@ -54,7 +55,7 @@ export default function FileInbox() {
   //     console.error("Error loading files:", err);
   //   }
   // }
-  async function loadFiles(departmentId, division = '', unit = '', status = '') {
+ async function loadFiles(departmentId, division = '', unit = '', status = '') {
   try {
     const params = new URLSearchParams();
     if (departmentId) params.append('department', departmentId);
@@ -68,8 +69,10 @@ export default function FileInbox() {
     const data = await response.json();
     console.log('Fetched data:', data);
     setFiles(data);
+    return data;
   } catch (err) {
     console.error("Error loading files:", err);
+    throw err;
   }
 }
 
@@ -86,6 +89,13 @@ export default function FileInbox() {
         }));
         console.log('options:',options)
         setDepartments(options); // ✅ now set actual department data
+        // Preselect user's department if available
+        const userDeptCode = user?.user?.department;
+        if (userDeptCode) {
+          const userDeptOption = options.find(o => o.value === userDeptCode) || null;
+          setSelectedDepartment(userDeptOption);
+          setAppliedFilters({ department: userDeptCode, division: '', unit: '', status: '' });
+        }
       } catch (error) {
         console.error('Failed to fetch departments:', error);
       }
@@ -216,34 +226,45 @@ const handleViewClick = async (fileToEdit) =>{
 }
 
 
-const handleFilterByDept = () =>{
+const handleFilterByDept = async () =>{
   // if(selectedDepartment){
   //   loadFiles(selectedDepartment?.value, selectedDivision?.value, selectedUnit?.value, approvalStatus || '');
   // }
-  loadFiles(
-    selectedDepartment?.value || '', 
-    selectedDivision?.value || '', 
-    selectedUnit?.value || '', 
-    approvalStatus || ''
-  );
+	  const getCode = (optOrStr) => {
+	  	if (!optOrStr) return '';
+	  	if (typeof optOrStr === 'string') return optOrStr;
+	  	return optOrStr.value || '';
+	  };
+
+	  const deptCode = getCode(selectedDepartment) || (user?.user?.department || '');
+	  const divCode = getCode(selectedDivision);
+	  const unitCode = getCode(selectedUnit);
+  const status = approvalStatus || '';
+
+	  console.log('[Inbox] Apply Filter with:', { department: deptCode, division: divCode, unit: unitCode, status });
+  try {
+    setAppliedFilters({ department: deptCode, division: divCode, unit: unitCode, status });
+    const result = await loadFiles(
+      deptCode,
+      divCode,
+      unitCode,
+      status
+    );
+  } catch (e) {
+    // swallow; errors are logged in loadFiles
+  }
 }
 
 const clearFilter = () =>{
-  
-    
-    // setSelectedDepartment(null)
-    // setApprovalStatus('')
-    // loadFiles('GSO')
-    const defaultDept = 'OGS';
-  const defaultStatus = '';
-  const defaultDiv = '';
-  const defaultUnit = '';
-
-  setSelectedDepartment(defaultDept);
-  setSelectedDivision(defaultDiv);
-  setSelectedUnit(defaultUnit)
-  setApprovalStatus(defaultStatus);
-  loadFiles(defaultDept, defaultDiv, defaultUnit, defaultStatus);
+	// Reset to user's department option; clear division/unit/status
+	const userDeptCode = user?.user?.department || '';
+	const deptOption = departments.find(d => d.value === userDeptCode) || null;
+	setSelectedDepartment(deptOption);
+	setSelectedDivision(null);
+	setSelectedUnit(null);
+	setApprovalStatus('');
+	setAppliedFilters({ department: userDeptCode || '', division: '', unit: '', status: '' });
+	loadFiles(userDeptCode || '', '', '', '');
 }
 
 
@@ -256,12 +277,12 @@ useEffect(() => {
 
 	const buildParams = () => {
 		const params = new URLSearchParams();
-		// Fallback to user's department if none selected so list doesn't clear
-		const dept = selectedDepartment?.value || user?.user?.department;
+		// Use last applied filters only (not live dropdown selections)
+		const dept = appliedFilters.department || user?.user?.department;
 		if (dept) params.append('department', dept);
-		if (selectedDivision?.value) params.append('division', selectedDivision.value);
-		if (selectedUnit?.value) params.append('unit', selectedUnit.value);
-		if (approvalStatus) params.append('status', approvalStatus);
+		if (appliedFilters.division) params.append('division', appliedFilters.division);
+		if (appliedFilters.unit) params.append('unit', appliedFilters.unit);
+		if (appliedFilters.status) params.append('status', appliedFilters.status);
 		params.append('userId', userId);
 		return params.toString();
 	};
@@ -286,10 +307,9 @@ useEffect(() => {
 				for (const file of data) {
 					if (!prevFileIdsRef.current.has(file?.id)) newCount += 1;
 				}
-				if (newCount > 0) {
-					console.log(`[Inbox Polling] ${newCount} new files received`);
-					showToast(`${newCount} new files received`, '', 'success');
-				}
+                if (newCount > 0) {
+                    console.log(`[Inbox Polling] ${newCount} new files received`);
+                }
 			}
 
 			prevFileIdsRef.current = currentIds;
@@ -310,7 +330,7 @@ useEffect(() => {
 		isCancelled = true;
 		clearInterval(intervalId);
 	};
-}, [selectedDepartment?.value, selectedDivision?.value, selectedUnit?.value, approvalStatus, user?.user?.id]);
+}, [appliedFilters, user?.user?.id]);
 
 useEffect(() => {
   const fetchDivisions = async () => {
