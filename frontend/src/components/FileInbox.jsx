@@ -32,6 +32,10 @@ export default function FileInbox() {
 
       const [approvalStatus, setApprovalStatus] = useState('');
 	  const [appliedFilters, setAppliedFilters] = useState({ department: '', division: '', unit: '', status: '' });
+      const [newFilesCount, setNewFilesCount] = useState(0);
+      const [showNewFilesAlert, setShowNewFilesAlert] = useState(false);
+      const latestReceivedAtRef = useRef(0);
+      const suppressNextAlertRef = useRef(false);
 
       const navigate = useNavigate()
 
@@ -244,6 +248,8 @@ const handleFilterByDept = async () =>{
 	  console.log('[Inbox] Apply Filter with:', { department: deptCode, division: divCode, unit: unitCode, status });
   try {
     setAppliedFilters({ department: deptCode, division: divCode, unit: unitCode, status });
+    // Prevent alert triggered by filter-driven dataset change
+    suppressNextAlertRef.current = true;
     const result = await loadFiles(
       deptCode,
       divCode,
@@ -264,6 +270,8 @@ const clearFilter = () =>{
 	setSelectedUnit(null);
 	setApprovalStatus('');
 	setAppliedFilters({ department: userDeptCode || '', division: '', unit: '', status: '' });
+	// Prevent alert triggered by filter-driven dataset change
+	suppressNextAlertRef.current = true;
 	loadFiles(userDeptCode || '', '', '', '');
 }
 
@@ -301,18 +309,39 @@ useEffect(() => {
 			const data = await response.json();
 			if (isCancelled || !Array.isArray(data)) return;
 
-			const currentIds = new Set(data.map(f => f?.id));
+			const getKey = (f) => (f && (f.id ?? f.file_id)) ?? null;
+			const currentKeysArr = data.map(f => getKey(f)).filter(k => k !== null);
+			const currentIds = new Set(currentKeysArr);
+			const parseTs = (v) => v ? new Date(v).getTime() : 0;
+			const currentMaxTs = data.reduce((max, f) => Math.max(max, parseTs(f?.date_added)), 0);
 			if (pollingInitializedRef.current) {
+				// Skip alert once immediately after filters are applied/reset
+				if (suppressNextAlertRef.current) {
+					prevFileIdsRef.current = currentIds;
+					if (currentMaxTs) latestReceivedAtRef.current = currentMaxTs;
+					suppressNextAlertRef.current = false;
+					pollingInitializedRef.current = true;
+					setFiles(data);
+					return;
+				}
 				let newCount = 0;
 				for (const file of data) {
-					if (!prevFileIdsRef.current.has(file?.id)) newCount += 1;
+					const key = getKey(file);
+					const isNewById = key !== null ? !prevFileIdsRef.current.has(key) : false;
+					const isNewByTime = latestReceivedAtRef.current ? parseTs(file?.date_added) > latestReceivedAtRef.current : false;
+					if (isNewById || isNewByTime) newCount += 1;
 				}
-                if (newCount > 0) {
-                    console.log(`[Inbox Polling] ${newCount} new files received`);
+				if (newCount > 0) {
+					console.log(`[Inbox Polling] ${newCount} new files received (showing alert). keys=`, currentKeysArr);
+                    setNewFilesCount(newCount);
+                    setShowNewFilesAlert(true);
+					// Auto-hide after 6 seconds for visibility
+					setTimeout(() => setShowNewFilesAlert(false), 6000);
                 }
 			}
 
 			prevFileIdsRef.current = currentIds;
+			if (currentMaxTs) latestReceivedAtRef.current = currentMaxTs;
 			pollingInitializedRef.current = true;
 			setFiles(data);
 		} catch (err) {
@@ -406,6 +435,38 @@ const isOverdue = (receivedAt) => {
 };
 
 
+
+const isNew = (receivedAt) => {
+  const diffHours = (new Date() - new Date(receivedAt)) / (1000 * 60 * 60);
+  return diffHours <= 24; // within last 24 hours
+};
+
+
+const markAsRead = async (id) => {
+  try {
+    const response = await fetch(`http://localhost:5000/api/files/${id}/read`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Optional: you can read the returned JSON if needed
+    // const data = await response.json();
+
+    // Update state locally
+    setFiles(files.map(f => f.id === id ? { ...f, is_read: 1 } : f));
+
+  } catch (err) {
+    console.error("Error marking as read:", err);
+  }
+};
+
+
   return (
     <>
     <div className="container mt-5">
@@ -426,6 +487,11 @@ const isOverdue = (receivedAt) => {
             onChange={(e) => setSearch(e.target.value)}
           />
     </div>
+        {showNewFilesAlert && (
+          <div className="alert alert-info m-0 rounded-0" role="alert">
+            {newFilesCount} new files received
+          </div>
+        )}
     <div>
             <Select
         options={departments}
@@ -545,7 +611,7 @@ const isOverdue = (receivedAt) => {
       if (file.status === "rejected") badgeClass = "bg-danger";
 
       return (
-        <tr key={file?.id}>
+        <tr key={file?.id} onClick={() => markAsRead(file.id)} className={`${!file.is_read ? "bg-yellow-100 font-semibold" : ""}`}>
           <td>{index + 1}</td>
           <td onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }} className={new Date(file?.date_added).toDateString() === new Date().toDateString() ? "highlight-today" : ""}>{file?.file_id}</td>
           {/* <td>{file?.file_name}</td> */}
@@ -579,6 +645,14 @@ const isOverdue = (receivedAt) => {
               Delete
             </button>
           </td>}
+          <td>
+              {!file.is_read && (
+                <span className="text-red-600 font-bold animate-pulse" style={{backgroundColor: 'yellow'}}>
+                  NEW
+                </span>
+              )}
+            </td>
+            {/* <td>{isNew(file.date_added) && <span className="text-blue-600 font-bold">NEW</span>}</td> */}
         </tr>
       );
     })}
