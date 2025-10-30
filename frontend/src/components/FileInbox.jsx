@@ -1,6 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import DeleteModal from './DeleteModal';
-import { useToast } from '../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { getAttachments } from '../utils/dbProvider';
@@ -38,12 +37,6 @@ export default function FileInbox() {
       const suppressNextAlertRef = useRef(false);
 
       const navigate = useNavigate()
-
-     const { showToast } = useToast();
-
-	    // Track previous file IDs to detect newly received files
-	    const prevFileIdsRef = useRef(new Set());
-	    const pollingInitializedRef = useRef(false);
 
      const handleApprovalStatusChange = (e) => {
     setApprovalStatus(e.target.value);
@@ -276,90 +269,6 @@ const clearFilter = () =>{
 }
 
 
-
-
-// Background polling to detect new files and notify the user
-useEffect(() => {
-	const userId = user?.user?.id;
-	if (!userId) return;
-
-	const buildParams = () => {
-		const params = new URLSearchParams();
-		// Use last applied filters only (not live dropdown selections)
-		const dept = appliedFilters.department || user?.user?.department;
-		if (dept) params.append('department', dept);
-		if (appliedFilters.division) params.append('division', appliedFilters.division);
-		if (appliedFilters.unit) params.append('unit', appliedFilters.unit);
-		if (appliedFilters.status) params.append('status', appliedFilters.status);
-		params.append('userId', userId);
-		return params.toString();
-	};
-
-	let isCancelled = false;
-
-	const fetchAndNotify = async () => {
-		try {
-			const query = buildParams();
-			console.log('[Inbox Polling] requesting: /api/files?' + query);
-			const response = await fetch(`http://localhost:5000/api/files?${query}`);
-			if (!response.ok) {
-				console.error('Polling fetch failed with status:', response.status);
-				return;
-			}
-			const data = await response.json();
-			if (isCancelled || !Array.isArray(data)) return;
-
-			const getKey = (f) => (f && (f.id ?? f.file_id)) ?? null;
-			const currentKeysArr = data.map(f => getKey(f)).filter(k => k !== null);
-			const currentIds = new Set(currentKeysArr);
-			const parseTs = (v) => v ? new Date(v).getTime() : 0;
-			const currentMaxTs = data.reduce((max, f) => Math.max(max, parseTs(f?.date_added)), 0);
-			if (pollingInitializedRef.current) {
-				// Skip alert once immediately after filters are applied/reset
-				if (suppressNextAlertRef.current) {
-					prevFileIdsRef.current = currentIds;
-					if (currentMaxTs) latestReceivedAtRef.current = currentMaxTs;
-					suppressNextAlertRef.current = false;
-					pollingInitializedRef.current = true;
-					setFiles(data);
-					return;
-				}
-				let newCount = 0;
-				for (const file of data) {
-					const key = getKey(file);
-					const isNewById = key !== null ? !prevFileIdsRef.current.has(key) : false;
-					const isNewByTime = latestReceivedAtRef.current ? parseTs(file?.date_added) > latestReceivedAtRef.current : false;
-					if (isNewById || isNewByTime) newCount += 1;
-				}
-				if (newCount > 0) {
-					console.log(`[Inbox Polling] ${newCount} new files received (showing alert). keys=`, currentKeysArr);
-                    setNewFilesCount(newCount);
-                    setShowNewFilesAlert(true);
-					// Auto-hide after 6 seconds for visibility
-					setTimeout(() => setShowNewFilesAlert(false), 6000);
-                }
-			}
-
-			prevFileIdsRef.current = currentIds;
-			if (currentMaxTs) latestReceivedAtRef.current = currentMaxTs;
-			pollingInitializedRef.current = true;
-			setFiles(data);
-		} catch (err) {
-			console.error('Polling error loading files:', err);
-		}
-	};
-
-	// Run immediately so users don't have to wait for the first interval
-	fetchAndNotify();
-
-	// Then continue polling
-	const intervalId = setInterval(fetchAndNotify, 5000); // 5 seconds
-
-	return () => {
-		isCancelled = true;
-		clearInterval(intervalId);
-	};
-}, [appliedFilters, user?.user?.id]);
 
 useEffect(() => {
   const fetchDivisions = async () => {
