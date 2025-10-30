@@ -496,9 +496,9 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
   const insertFileQuery = `
     INSERT INTO files (
       file_id, file_subject, receiver, date_added,
-      current_status, remarks, status,department,division,unit,file_no
+      current_status, remarks, status,department,division,unit,file_no, receivedAt
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?,?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?)
   `;
 
   const fileValues = [
@@ -515,7 +515,7 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
     status,
     department,
     division,
-    unit,file_no
+    unit,file_no,new Date().toISOString()
     
   ];
 
@@ -870,6 +870,19 @@ app.get("/api/files", (req, res) => {
 
 
 
+
+app.put("/api/files/:id/read", (req, res) => {
+  const { id } = req.params;
+
+  const query = `UPDATE files SET is_read = TRUE WHERE id = ?`;
+  db.query(query, [id], (err, result) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json({ message: "File marked as read" });
+  });
+});
 
 
 
@@ -1477,6 +1490,40 @@ app.get("/api/debug-counter", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to get counter value" });
+  }
+});
+
+
+
+app.get("/api/users", async (req, res) => {
+  try {
+    const [rows] = await dbPromise.query("SELECT * FROM signup ORDER BY id ASC");
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Error fetching users" });
+  }
+});
+
+
+
+app.delete("/api/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user exists
+    // const [checkUser] = await db.execute("SELECT * FROM signup WHERE id = ?", [id]);
+    // if (checkUser.length === 0) {
+    //   return res.status(404).json({ message: "User not found" });
+    // }
+
+    // Delete user
+    await dbPromise.query("DELETE FROM signup WHERE id = ?", [id]);
+
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ message: "Error deleting user" });
   }
 });
 
