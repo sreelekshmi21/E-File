@@ -965,16 +965,42 @@ app.get("/api/files/today", (req, res) => {
     return res.status(400).json({ error: "Missing department" });
   }
 
-  const query = `SELECT * FROM files WHERE DATE(date_added) = CURDATE()
-                  AND department = ? ORDER BY date_added DESC`;
+  // Use an inclusive start and exclusive end range for "today" to avoid timezone
+  // ambiguities with DATE(date_added) = CURDATE() and preserve index usage.
+  const query = `
+    SELECT *
+    FROM files
+    WHERE date_added >= CURDATE()
+      AND date_added < (CURDATE() + INTERVAL 1 DAY)
+      AND department = ?
+    ORDER BY date_added DESC
+  `;
 
   db.query(query, [department], (err, results) => {
     if (err) {
       console.error("Database error:", err);
       return res.status(500).json({ error: "Database error" });
     }
-    
-    res.json(results);
+    if (Array.isArray(results) && results.length > 0) {
+      return res.json(results);
+    }
+
+    // Fallback: some environments store date_added in a way that range misses records.
+    // Try DATE(date_added) = CURDATE() with department as a secondary attempt.
+    const fallbackQuery = `
+      SELECT *
+      FROM files
+      WHERE DATE(date_added) = CURDATE()
+        AND department = ?
+      ORDER BY date_added DESC
+    `;
+    db.query(fallbackQuery, [department], (fbErr, fbResults) => {
+      if (fbErr) {
+        console.error("Database error (fallback):", fbErr);
+        return res.status(500).json({ error: "Database error" });
+      }
+      return res.json(fbResults || []);
+    });
   });
 });
 
