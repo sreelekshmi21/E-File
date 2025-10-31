@@ -23,7 +23,7 @@ export default function RemarksEditor({ formData, setFormData, viewMode }) {
         toolbar:
           'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | link image | code',
         branding: false,
-        readonly: viewMode, // disable editing in viewMode
+        readonly: viewMode ? 1 : 0, // disable editing in viewMode
       }}
     />
   );

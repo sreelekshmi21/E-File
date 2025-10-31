@@ -506,7 +506,7 @@ const markAsRead = async (id) => {
             {/* <th scope="col">InwardNum</th> */}
              {/* <th scope="col">OutwardNum</th> */}
               <th scope="col">Live File Location</th>
-               <th scope="col">Remarks</th>
+               {/* <th scope="col">Remarks</th> */}
             <th scope="col">Status</th>
             <th></th>
             {user?.user?.role == 'admin' && <th scope="col">Action</th>}
@@ -534,7 +534,7 @@ const markAsRead = async (id) => {
           {/* <td>{file.outwardnum}</td> */}
           {console.log('rec===',file?.receiver)}
           <td>{file?.receiver}</td>
-          <td>{file?.remarks}</td>
+          {/* <td>{file?.remarks}</td> */}
           <td>
             <span className={`badge ${badgeClass}`}>
               {file?.status}              

@@ -25,6 +25,7 @@ export default function Dashboard() {
   };
 
   async function loadTodaysFiles(departmentId) {
+      console.log('today',departmentId)
       try {
         const response = await fetch(`http://localhost:5000/api/files/today?department=${departmentId}`);
         const data = await response.json();
@@ -69,6 +70,33 @@ export default function Dashboard() {
       
      
     }, [])
+
+  // Auto-refresh counts periodically so pending count updates when new files arrive
+  useEffect(() => {
+    const departmentId = user?.user?.department;
+    if (!departmentId) return;
+
+    let cancelled = false;
+
+    const refresh = async () => {
+      if (cancelled) return;
+      try {
+        await loadPendingFiles(departmentId);
+        await loadTodaysFiles(departmentId);
+      } catch (e) {
+        // errors already logged inside loaders
+      }
+    };
+
+    // Run immediately and then on interval
+    refresh();
+    const interval = setInterval(refresh, 10000); // 10s
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [user?.user?.department]);
     
   console.log('USER',user)
 
@@ -82,12 +110,14 @@ export default function Dashboard() {
     {/* 👉 Main Dashboard Content */}
     <div className="col-md-9">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Dashboard</h2>
+        <h2 style={{fontSize: '27px'}}>Santhigiri Foundation</h2>
         {user?.user?.role == 'admin' && <button className="btn btn-primary" onClick={handleCreateFile}>
           + Create File
         </button>}
       </div>
-
+      {/* <div>
+        <h3>Santhigiri Foundation</h3>
+      </div> */}
       <div className="row">
         {/* Card 1 */}
         <div className="col-md-3">

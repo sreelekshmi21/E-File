@@ -763,7 +763,17 @@ useEffect(() => {
   <div className="row">
     <Sidebar />
     {/* Left Column - Form */}
-    <div className="col-md-10 bg-light border p-4">
+    <div className="col-md-5 bg-light border p-4"><div className="row mb-3">
+    <div className="col-md-12">
+      <label className="form-label" htmlFor="remarks">Note File:</label>
+      {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
+      <RemarksEditor formData={formData} setFormData={setFormData}
+            viewMode={viewMode} />
+      {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
+        viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/> */}
+    </div>
+  </div></div>
+    <div className="col-md-5 bg-light border p-4">
       {/* <h4 className="text-center mb-4">CREATE FILE</h4>
       <button>EDIT FILE</button> */}
       <div className="d-flex align-items-center mb-4">
@@ -783,6 +793,7 @@ useEffect(() => {
                   onChange={(selectedOption) => setSelectedDepartment(selectedOption)}
                   isSearchable={true}
                   placeholder="Search or Select Department"
+                  isDisabled={viewMode}
                 /> 
           {/* <select
               value={selectedDepartment || ''}
@@ -828,6 +839,7 @@ useEffect(() => {
         onChange={(selectedOption) => setSelectedDivision(selectedOption)}
         isSearchable={true}
         placeholder="Divisions"
+        isDisabled={viewMode}
       /> 
         </div>
         </div>
@@ -840,6 +852,7 @@ useEffect(() => {
         onChange={(selectedOption) => setSelectedUnit(selectedOption)}
         isSearchable={true}
         placeholder="Units"
+        isDisabled={viewMode}
       /> {/* <select
               value={selectedUnit}
              onChange={(e) => setSelectedUnit(e.target.value)}
@@ -943,16 +956,16 @@ useEffect(() => {
     </div>
    </div> */}
   {/* Remarks */}
-  <div className="row mb-3">
+  {/* <div className="row mb-3">
     <div className="col-md-12">
-      <label className="form-label" htmlFor="remarks">Note File:</label>
+      <label className="form-label" htmlFor="remarks">Note File:</label> */}
       {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
-      <RemarksEditor formData={formData} setFormData={setFormData}
-            viewMode={viewMode} />
+      {/* <RemarksEditor formData={formData} setFormData={setFormData}
+            viewMode={viewMode} /> */}
       {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
         viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/> */}
-    </div>
-  </div>
+    {/* </div>
+  </div> */}
 
   {/* Attachments */}
   {/* <div className="row mb-4">
@@ -1015,6 +1028,7 @@ useEffect(() => {
                   onChange={(selectedOption) => setSelectedReceiver(selectedOption)}
                   isSearchable={true}
                   placeholder="Search or Select Department"
+                  isDisabled={viewMode}
                 /> 
     </div>
    </div> 
