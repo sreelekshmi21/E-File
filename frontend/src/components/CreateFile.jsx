@@ -228,7 +228,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   const file_subject = document.getElementById("file_subject").value;
   // const sender = document.getElementById("sender").value;
   // const receiver = document.getElementById("receiver").value == '' ? selectedDepartment?.value : document.getElementById("receiver").value;
-  const date_added = document.getElementById("date_added").value;
+  // const date_added = document.getElementById("date_added").value;
   // const inwardnum = document.getElementById("inwardnum").value;
   // const outwardnum = document.getElementById("outwardnum").value;
   // const current_status = document.getElementById("current_status").value;
@@ -247,7 +247,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   formDatas.append("file_subject", file_subject);
   // formDatas.append("sender", sender);
   formDatas.append("receiver", selectedReceiver?.value);
-  formDatas.append("date_added", date_added);
+  // formDatas.append("date_added", date_added);
   // formDatas.append("inwardnum", inwardnum);
   // formDatas.append("outwardnum", outwardnum);
   formDatas.append("current_status", selectedDepartment?.value);
@@ -920,10 +920,10 @@ useEffect(() => {
       <label className="form-label mb-0" htmlFor="receiver">File Recipient:</label>
       <input type="text" name="receiver" id="receiver" className="form-control" value={formData.receiver} onChange={handleChange} disabled={viewMode}/>
     </div> */}
-    <div className="col-md-6 d-flex align-items-center gap-2">
+    {fileToEdit?.id && <div className="col-md-6 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="date_added">Date:</label>
       <input type="datetime-local" name="date_added" id="date_added" className="form-control" value={formData.date_added} onChange={handleChange} disabled={viewMode}/>
-    </div>
+    </div>}
     <div className="col-md-6 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="current_status">Live File Location:</label>
       {/* <input type="text" name="current_status" id="current_status" className="form-control" value={formData.current_status} onChange={handleChange} disabled={viewMode}/> */}
