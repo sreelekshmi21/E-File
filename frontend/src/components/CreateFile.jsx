@@ -755,6 +755,10 @@ useEffect(() => {
   }, [user?.user?.department,departments]);
   
 
+  useEffect(() => {
+    console.log('selectedReceiver',selectedReceiver)
+  }, [selectedReceiver])
+  
   
 
   return (
@@ -1029,6 +1033,7 @@ useEffect(() => {
                   isSearchable={true}
                   placeholder="Search or Select Department"
                   isDisabled={viewMode}
+                  isMulti // This prop enables multi-selection
                 /> 
     </div>
    </div> 

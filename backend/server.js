@@ -974,7 +974,7 @@ app.get("/api/files/today", (req, res) => {
     FROM files
     WHERE date_added >= CURDATE()
       AND date_added < (CURDATE() + INTERVAL 1 DAY)
-      AND department = ?
+      AND receiver = ?
     ORDER BY date_added DESC
   `;
 
@@ -993,7 +993,7 @@ app.get("/api/files/today", (req, res) => {
       SELECT *
       FROM files
       WHERE DATE(date_added) = CURDATE()
-        AND department = ?
+        AND receiver = ?
       ORDER BY date_added DESC
     `;
     db.query(fallbackQuery, [department], (fbErr, fbResults) => {
