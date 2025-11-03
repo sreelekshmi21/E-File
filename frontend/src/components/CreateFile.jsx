@@ -1033,7 +1033,7 @@ useEffect(() => {
                   isSearchable={true}
                   placeholder="Search or Select Department"
                   isDisabled={viewMode}
-                  isMulti // This prop enables multi-selection
+                  // isMulti // This prop enables multi-selection
                 /> 
     </div>
    </div> 
