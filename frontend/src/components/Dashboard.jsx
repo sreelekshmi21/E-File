@@ -111,7 +111,7 @@ export default function Dashboard() {
     <div className="col-md-9">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 style={{fontSize: '27px'}}>Santhigiri Foundation</h2>
-        {user?.user?.role == 'admin' && <button className="btn btn-primary" onClick={handleCreateFile}>
+        {(user?.user?.role == 'admin' || user?.user?.role == 'staff') && <button className="btn btn-primary" onClick={handleCreateFile}>
           + Create File
         </button>}
       </div>

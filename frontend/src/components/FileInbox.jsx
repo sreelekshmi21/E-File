@@ -340,7 +340,7 @@ const isOverdue = (receivedAt) => {
   const now = new Date();             // current time
   const received = new Date(receivedAt); // time when file was received
   const hoursPassed = (now - received) / (1000 * 60 * 60); // milliseconds → hours
-  return hoursPassed > 24;            // true if more than 24 hours old
+  return hoursPassed > 48;            // true if more than 48 hours old
 };
 
 

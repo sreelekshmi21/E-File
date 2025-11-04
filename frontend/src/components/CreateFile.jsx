@@ -1050,7 +1050,7 @@ useEffect(() => {
     {fileToEdit?.id && (
   <div className="d-flex mt-3">
     {console.log('user role', user)}
-    {user?.user?.role === 'admin' && (
+    {(user?.user?.role === 'admin' || user?.user?.role === 'staff') && (
       <button 
         className="btn btn-primary"
         onClick={() => handleEditClick(fileToEdit)}

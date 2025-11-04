@@ -76,7 +76,7 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
       if (response.ok) {
         alert('✅ Comment added!');
         setComment('');
-        fetchComments()
+        fetchComments();
 
         setSelectedFiles([]); // clear files after upload
 
@@ -160,7 +160,11 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
   };
 
 
-
+  const handleEditorChange = (content) => {
+     setComment(content);
+  };
+ 
+  
   return (
     <>
      <div style={{ maxWidth: "900px", margin: "auto", padding: "20px" }}>
@@ -168,13 +172,14 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
 
       <Editor
         // onInit={(evt, editor) => (editorRef.current = editor)}
+        tinymceScriptSrc="/tinymce/tinymce.min.js"  // 👈 ensures local TinyMCE is loaded
         onInit={(evt, editor) => {
         editorRef.current = editor;
         // Register custom button
         
       }}
         initialValue=""
-        apiKey="54ugn72qi4pzas32feag7mcosn0lftniz5opr5mf8qaqnh1c"
+        // apiKey="54ugn72qi4pzas32feag7mcosn0lftniz5opr5mf8qaqnh1c"
         init={{
           height: 500,
           menubar: true,
@@ -188,10 +193,20 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
       "searchreplace", "visualblocks", "code", "fullscreen",
       "insertdatetime", "media", "table", "help", "wordcount"
     ],
-          toolbar: "undo redo | formatselect | attachFileButton bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help"
+          toolbar: "undo redo | formatselect | attachFileButton bold italic underline | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help",
+    //       setup: (editor) => {
+    //   handleEditorInit(editor);
+    // },
+        license_key: 'gpl'
+    
         }}
+        
         disabled={viewMode}
-      />
+        value={comment}                // ✅ Bind to state
+        onEditorChange={handleEditorChange} // ✅ Update state on typing
+        
+    
+    />
       
       {!viewMode && <button className="btn btn-primary mt-3" onClick={handleSave}>
         Add Comment
@@ -202,7 +217,7 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
         <select id="approvalStatus" name="approvalStatus" 
            value={approvalStatus} onChange={handleApprovalStatusChange}
            required 
-           disabled={user?.user?.role == 'viewer' || viewMode}>
+           disabled={user?.user?.role == 'viewer' || viewMode || user?.user?.role == 'staff' }>
           <option value="">-- Select Status --</option>
           <option value="approved">✅ Approved</option>
           <option value="rejected">❌ Rejected</option>

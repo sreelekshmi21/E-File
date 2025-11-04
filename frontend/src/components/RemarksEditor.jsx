@@ -1,5 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import { Editor } from '@tinymce/tinymce-react';
+// // ✅ Import TinyMCE core and the theme
+// import 'tinymce/tinymce';
+// import 'tinymce/icons/default';
+// import 'tinymce/themes/silver';
+// import 'tinymce/models/dom';
+
+// // ✅ Import only the plugins you actually use
+// import 'tinymce/plugins/link';
+// import 'tinymce/plugins/lists';
+// import 'tinymce/plugins/table';
+// import 'tinymce/plugins/code';
 
 export default function RemarksEditor({ formData, setFormData, viewMode }) {
   const editorRef = useRef(null);
@@ -29,17 +40,20 @@ export default function RemarksEditor({ formData, setFormData, viewMode }) {
   return (
     <Editor
       // apiKey="your-api-key" // Optional for dev; recommended for production
-      apiKey="54ugn72qi4pzas32feag7mcosn0lftniz5opr5mf8qaqnh1c" 
+      // apiKey="54ugn72qi4pzas32feag7mcosn0lftniz5opr5mf8qaqnh1c" 
+      tinymceScriptSrc="/tinymce/tinymce.min.js"  // 👈 ensures local TinyMCE is loaded
       value={formData.remarks}
       onEditorChange={handleEditorChange}
       init={{
         height: 300,
         menubar: false,
-        plugins: 'lists link image preview code',
+        // plugins: 'lists link image preview code',
+        plugins: 'link lists table code', // only local plugins
         toolbar:
           'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | link image | code',
         branding: false,
         // readonly: viewMode ? 1 : 0, // disable editing in viewMode
+        license_key: 'gpl'
       }}
       onInit={(_, editor) => {
         editorRef.current = editor;
