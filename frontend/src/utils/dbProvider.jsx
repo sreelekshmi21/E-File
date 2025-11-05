@@ -9,3 +9,10 @@ export const getAttachments = async (fileId) =>{
     console.error('Failed to load attachments:', error);
   }
   }
+
+
+  export const hasPermission = (perm) => {
+  const stored = JSON.parse(localStorage.getItem("user"));
+  if (!stored) return false;
+  return stored?.permissions.includes(perm);
+};

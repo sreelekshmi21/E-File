@@ -13,6 +13,7 @@ import FileInbox from './components/FileInbox'
 import FileTimeline from './components/FileTomeline'
 import AdminPanel from './components/AdminPanel'
 import UsersList from './components/UsersList'
+import Roles from './components/Roles'
 
 function App() {
 
@@ -26,6 +27,7 @@ function App() {
     { path: "/filetimeline", element: <FileTimeline /> },
     { path: "/adminpanel", element: <AdminPanel /> },
     { path: "/users", element: <UsersList /> },
+    { path: "/roles", element: <Roles /> },
   ]);
   return routes;
 };

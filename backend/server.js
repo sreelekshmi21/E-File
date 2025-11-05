@@ -391,54 +391,139 @@ app.post("/signup", async (req, res) => {
 });
 
 // Login API
-app.post("/login", (req, res) => {
+// app.post("/login", async (req, res) => {
+//   const { username, password } = req.body;
+
+//   // Validate input
+//   if (!username || !password) {
+//     return res.status(400).json({ error: "Username and password are required" });
+//   }
+
+//   // Check user in DB
+//   const sql = "SELECT * FROM signup WHERE username = ? AND passwd = ?";
+//   db.query(sql, [username, password], (err, results) => {
+//     if (err) {
+//       console.error("❌ Database error:", err);
+//       return res.status(500).json({ error: "Database error" });
+//     }
+
+//     if (results.length === 0) {
+//       return res.status(401).json({ error: "Invalid username or password" });
+//     }
+
+//     const token = jwt.sign(
+//     { id: results[0].id, username: results[0].username, role_id: results[0].role_id },
+//     SECRET_KEY,
+//     { expiresIn: '1h' }
+//   );
+
+//   const [permissions] = await dbPromise.query(
+//     `SELECT p.permission_name
+//      FROM role_permissions rp
+//      JOIN permissions p ON rp.permission_id = p.id
+//      WHERE rp.role_id = ?`,
+//     [user.role_id]
+//   );
+
+//     const permissionNames = permissions.map(p => p.permission_name);
+
+//     if (results.length > 0) {
+//       // ✅ Login success
+//       res.json({
+//         message: "Login successful!",
+//         user: {
+//           id: results[0].id,
+//           username: results[0].username,
+//           email: results[0].email,
+//           department: results[0].department,
+//           role_id: results[0].role_id,
+//           token: token
+//         },
+//         permissions: permissionNames
+//       });
+//     } else {
+//       // ❌ Wrong username or password
+//       res.status(401).json({ error: "Invalid username or password" });
+//     }
+//   });
+
+// });
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
-  // Validate input
   if (!username || !password) {
     return res.status(400).json({ error: "Username and password are required" });
   }
 
-  // Check user in DB
-  const sql = "SELECT * FROM signup WHERE username = ? AND passwd = ?";
-  db.query(sql, [username, password], (err, results) => {
-    if (err) {
-      console.error("❌ Database error:", err);
-      return res.status(500).json({ error: "Database error" });
-    }
+  try {
+    // ✅ Use promise-based query instead of callback
+    const [results] = await db.promise().query(
+      "SELECT * FROM signup WHERE username = ? AND passwd = ?",
+      [username, password]
+    );
 
     if (results.length === 0) {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
+    const user = results[0];
+
+    // ✅ Fetch permissions for the user's role
+    const [permissions] = await db.promise().query(
+      `SELECT p.name
+       FROM role_permissions rp
+       JOIN permissions p ON rp.permission_id = p.id
+       WHERE rp.role_id = ?`,
+      [user.role_id]
+    );
+
+    const permissionNames = permissions.map(p => p.name);
+
     const token = jwt.sign(
-    { id: results[0].id, username: results[0].username, role: results[0].role },
-    SECRET_KEY,
-    { expiresIn: '1h' }
-  );
+      { id: user.id, username: user.username, role_id: user.role_id },
+      SECRET_KEY,
+      { expiresIn: '1h' }
+    );
 
-    if (results.length > 0) {
-      // ✅ Login success
-      res.json({
-        message: "Login successful!",
-        user: {
-          id: results[0].id,
-          username: results[0].username,
-          email: results[0].email,
-          department: results[0].department,
-          role: results[0].role,
-          token: token
-        },
-      });
-    } else {
-      // ❌ Wrong username or password
-      res.status(401).json({ error: "Invalid username or password" });
-    }
-  });
+    // ✅ Success
+    res.json({
+      message: "Login successful!",
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        department: user.department,
+        role_id: user.role_id,
+        token: token,
+      },
+      permissions: permissionNames,
+    });
 
-  
-
+  } catch (err) {
+    console.error("❌ Database error:", err);
+    res.status(500).json({ error: "Database error" });
+  }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // app.post("/createfile", async (req, res) => {
 //   const { file_name, file_subject,file_id,originator,file_recipient,date,inwardnum,outwardnum, current_status,remarks } = req.body;
@@ -1555,6 +1640,43 @@ app.delete("/api/users/:id", async (req, res) => {
   }
 });
 
+
+app.get("/api/roles", async (req, res) => {
+  const [roles] = await dbPromise.query("SELECT * FROM roles");
+  const [permissions] = await dbPromise.query("SELECT * FROM permissions");
+
+  const [rolePerms] = await dbPromise.query(`
+    SELECT role_id, permission_id
+    FROM role_permissions
+  `);
+
+  const result = roles.map(role => ({
+    ...role,
+    permissions: permissions.map(p => ({
+      ...p,
+      assigned: rolePerms.some(rp => rp.role_id === role.id && rp.permission_id === p.id)
+    }))
+  }));
+
+  res.json(result);
+});
+
+
+app.post("/api/roles/:id/permissions", async (req, res) => {
+  const roleId = req.params.id;
+  const { permissionIds } = req.body; // e.g. [1, 2, 3]
+
+  // Delete existing
+  await dbPromise.query("DELETE FROM role_permissions WHERE role_id = ?", [roleId]);
+
+  // Insert new
+  if (permissionIds.length) {
+    const values = permissionIds.map(pid => [roleId, pid]);
+    await dbPromise.query("INSERT INTO role_permissions (role_id, permission_id) VALUES ?", [values]);
+  }
+
+  res.json({ message: "Role permissions updated successfully!" });
+});
 
 
 app.use((req, res, next) => {

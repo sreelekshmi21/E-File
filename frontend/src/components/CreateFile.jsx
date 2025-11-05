@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import DocumentEditor from './DocumentEditor';
 import { useToast } from '../context/ToastContext';
 import Sidebar from './Sidebar';
-import { getAttachments } from '../utils/dbProvider';
+import { getAttachments, hasPermission } from '../utils/dbProvider';
 import { useAuth } from '../context/AuthContext';
 import Select from 'react-select';
 import RemarksEditor from './RemarksEditor';
@@ -1050,7 +1050,15 @@ useEffect(() => {
     {fileToEdit?.id && (
   <div className="d-flex mt-3">
     {console.log('user role', user)}
-    {(user?.user?.role === 'admin' || user?.user?.role === 'staff') && (
+    {/* {(user?.user?.role_id == 1 || user?.user?.role_id == 2) && (
+      <button 
+        className="btn btn-primary"
+        onClick={() => handleEditClick(fileToEdit)}
+      >
+        EDIT FILE
+      </button>
+    )} */}
+    {(hasPermission("edit")) && (
       <button 
         className="btn btn-primary"
         onClick={() => handleEditClick(fileToEdit)}

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Editor } from "@tinymce/tinymce-react";
 import { useAuth } from '../context/AuthContext';
+import { hasPermission } from '../utils/dbProvider';
 
 export default function DocumentEditor({file_id,fetchComments,viewMode, approvalStatus, setApprovalStatus, selectedDepartment, receiver, id}) {
 
@@ -217,7 +218,9 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
         <select id="approvalStatus" name="approvalStatus" 
            value={approvalStatus} onChange={handleApprovalStatusChange}
            required 
-           disabled={user?.user?.role == 'viewer' || viewMode || user?.user?.role == 'staff' }>
+          //  disabled={user?.user?.role_id == 3 || viewMode || user?.user?.role_id == 2}
+           disabled={viewMode || hasPermission('approve') == false}
+           >
           <option value="">-- Select Status --</option>
           <option value="approved">✅ Approved</option>
           <option value="rejected">❌ Rejected</option>

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import DeleteModal from './DeleteModal';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import { getAttachments } from '../utils/dbProvider';
+import { getAttachments, hasPermission } from '../utils/dbProvider';
 import Select from 'react-select';
 import { useAuth } from '../context/AuthContext';
 import Profile from './Profile';
@@ -509,7 +509,7 @@ const markAsRead = async (id) => {
                {/* <th scope="col">Remarks</th> */}
             <th scope="col">Status</th>
             <th></th>
-            {user?.user?.role == 'admin' && <th scope="col">Action</th>}
+            {user?.user?.role_id == 1 && <th scope="col">Action</th>}
           </tr>
         </thead>
         <tbody id="fileTableBody">
@@ -541,7 +541,7 @@ const markAsRead = async (id) => {
             </span>
           </td>
           <td>{file?.status !== 'approved' && isOverdue(file.date_added) && <span style={{ color: "red" }}>🚩</span>}</td>
-          {user?.user?.role == 'admin' && <td>
+          {hasPermission('delete') && <td>
             {/* <button 
             className="btn btn-sm btn-primary"
             onClick={() => handleViewClick(file?.id)}>View</button>

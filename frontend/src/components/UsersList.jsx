@@ -1,7 +1,7 @@
 import React from 'react'
 import { useState } from 'react';
 import { useEffect } from 'react';
-import Sidebar from './Sidebar';
+import { Link } from 'react-router-dom';
 
 export default function UsersList() {
 
@@ -47,15 +47,16 @@ export default function UsersList() {
     
   return (
     <>
-    <Sidebar />
+    
     <div>UsersList</div>
+    <h3><Link to='/adminpanel'>Back to Admin Panel</Link></h3>
     {users?.length > 0 ? (<div className='col-md-10'><table border="1" style={{ width: "100%", borderCollapse: "collapse" }}>
     <thead>
       <tr style={{ backgroundColor: "#f2f2f2" }}>
         <th>Username</th>
         <th>Email</th>
         <th>Department</th>
-        <th>Role</th>
+        <th>RoleID</th>
       </tr>
     </thead>
     <tbody>
@@ -64,7 +65,7 @@ export default function UsersList() {
           <td>{user.username}</td>
           <td>{user.email}</td>
           <td>{user.department}</td>
-          <td>{user.role}</td>
+          <td>{user.role_id}</td>
           <td><button onClick={() => handleDelete(user?.id)}>DELETE</button></td>
         </tr>
       ))}
