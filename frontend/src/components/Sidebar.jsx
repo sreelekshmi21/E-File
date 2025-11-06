@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
 
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const navigate = useNavigate()
 
@@ -26,7 +26,7 @@ export default function Sidebar() {
           <Link className="nav-link" to='/fileinbox'>Inbox</Link>
         </li>
         <li className="nav-item">
-          <Link className="nav-link" to='/adminpanel'>Admin Panel</Link>
+          {user?.user?.role_id == 1 && <Link className="nav-link" to='/adminpanel'>Admin Panel</Link>}
         </li>
         <li className="nav-item">
       <button
