@@ -14,6 +14,7 @@ import FileTimeline from './components/FileTomeline'
 import AdminPanel from './components/AdminPanel'
 import UsersList from './components/UsersList'
 import Roles from './components/Roles'
+import RedList from './components/RedList'
 
 function App() {
 
@@ -28,6 +29,7 @@ function App() {
     { path: "/adminpanel", element: <AdminPanel /> },
     { path: "/users", element: <UsersList /> },
     { path: "/roles", element: <Roles /> },
+    { path: "/redlist", element: <RedList /> },
   ]);
   return routes;
 };

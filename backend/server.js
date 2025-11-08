@@ -571,6 +571,10 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
     file_no
   } = req.body;
 
+  const date_added = new Date();
+  // const expiry_date = new Date(date_added.getTime() + 48 * 60 * 60 * 1000); // +48 hours
+  const expiry_date = new Date(date_added.getTime() + 3 * 60 * 1000); // +48 hours
+
   const attachments = req.files;
 
   if (!file_id || !attachments) {
@@ -581,9 +585,9 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
   const insertFileQuery = `
     INSERT INTO files (
       file_id, file_subject, receiver, date_added,
-      current_status, remarks, status,department,division,unit,file_no, receivedAt
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?)
+      current_status, remarks, status,department,division,unit,file_no, receivedAt,
+    expiry)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)
   `;
 
   const fileValues = [
@@ -601,7 +605,7 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
     status,
     department,
     division,
-    unit,file_no,new Date().toISOString()
+    unit,file_no,new Date().toISOString(),0
     
   ];
 
@@ -1676,6 +1680,56 @@ app.post("/api/roles/:id/permissions", async (req, res) => {
   }
 
   res.json({ message: "Role permissions updated successfully!" });
+});
+
+
+
+app.put("/api/files/:id/expire", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await dbPromise.query(
+      // `UPDATE files SET status = 'expired' WHERE id = ?`,
+     `UPDATE files SET expiry = 1, status = 'expired' WHERE id = ?`,
+      [id]
+    );
+    res.json({ message: "File marked as expired" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error marking file expired" });
+  }
+});
+
+
+
+
+app.get("/api/files/redlist", async (req, res) => {
+  const [rows] = await db.promise().query(`
+    SELECT * FROM files WHERE expiry = 1 ORDER BY date_added DESC
+  `);
+  res.json(rows);
+});
+
+
+// Bulk delete API
+app.post("/api/files/bulk-delete", async (req, res) => {
+  const { fileIds } = req.body; // Expecting an array of IDs
+
+  if (!Array.isArray(fileIds) || fileIds.length === 0) {
+    return res.status(400).json({ message: "No file IDs provided" });
+  }
+
+  try {
+    const placeholders = fileIds.map(() => "?").join(","); // ?,?,?
+    const [result] = await dbPromise.query(
+      `DELETE FROM files WHERE id IN (${placeholders})`,
+      fileIds
+    );
+
+    res.json({ message: `${result.affectedRows} file(s) deleted successfully` });
+  } catch (err) {
+    console.error("Error deleting files:", err);
+    res.status(500).json({ message: "Error deleting files" });
+  }
 });
 
 

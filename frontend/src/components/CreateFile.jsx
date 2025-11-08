@@ -928,9 +928,8 @@ useEffect(() => {
       <label className="form-label mb-0" htmlFor="date_added">Date:</label>
       <input type="datetime-local" name="date_added" id="date_added" className="form-control" value={formData.date_added} onChange={handleChange} disabled={viewMode}/>
     </div>}
-    <div className="col-md-6 d-flex align-items-center gap-2">
-      <label className="form-label mb-0" htmlFor="current_status">Live File Location:</label>
-      {/* <input type="text" name="current_status" id="current_status" className="form-control" value={formData.current_status} onChange={handleChange} disabled={viewMode}/> */}
+    {/* <div className="col-md-6 d-flex align-items-center gap-2">
+      <label className="form-label mb-0" htmlFor="current_status">Live File Location:</label>      
       <Select
                   options={departments}
                   value={selectedDepartment}
@@ -939,7 +938,7 @@ useEffect(() => {
                   isDisabled={true}
                   placeholder="Live File Location"
                 /> 
-    </div>
+    </div> */}
   </div>
   {/* <div className="row mb-3">
     <div className="col-md-6 d-flex align-items-center gap-2">
@@ -1083,7 +1082,7 @@ useEffect(() => {
   <div className="d-flex justify-content-center mt-4 gap-3">
     <div>
       <button className="btn btn-success px-5" onClick={handleSave}>
-        {fileToEdit?.id ? 'Update' : 'Save'}
+        {fileToEdit?.id ? 'Update' : 'Send'}
       </button>
     </div>
     {fileToEdit?.id && <div>

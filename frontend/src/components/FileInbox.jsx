@@ -6,6 +6,8 @@ import { getAttachments, hasPermission } from '../utils/dbProvider';
 import Select from 'react-select';
 import { useAuth } from '../context/AuthContext';
 import Profile from './Profile';
+import DocumentExpiryCountdown from './DocumentExpiryCountdown';
+import BatteryTimer from './BatteryTimer';
 
 
 export default function FileInbox() {
@@ -14,6 +16,8 @@ export default function FileInbox() {
       const [showModal, setShowModal] = useState(false);
       const [fileToDelete, setFileToDelete] = useState(null);
       const [search, setSearch] = useState("");
+
+      const [selectedFiles, setSelectedFiles] = useState([])
 
       const { user } = useAuth();
 
@@ -376,6 +380,45 @@ const markAsRead = async (id) => {
 };
 
 
+const testExpiryDate = new Date(Date.now() + 2 * 60 * 1000); // 3 minutes from now
+const [expiry] = useState(testExpiryDate);
+
+const handleCheckboxChange = (id, checked) => {
+  setSelectedFiles((prev) =>
+    checked ? [...prev, id] : prev.filter((fid) => fid !== id)
+  );
+};
+
+
+
+const handleBulkDelete = async () => {
+  if (selectedFiles.length === 0) {
+    alert("Please select at least one file");
+    return;
+  }
+
+  if (!window.confirm("Are you sure you want to delete the selected files?")) return;
+
+  try {
+    const response = await fetch("http://localhost:5000/api/files/bulk-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileIds: selectedFiles }),
+    });
+
+    const data = await response.json();
+    alert(data.message);
+
+    // Refresh the file list after deletion
+    fetchFiles();
+  } catch (err) {
+    console.error("Error deleting files:", err);
+  }
+};
+
+
+
+
   return (
     <>
     <div className="container mt-5">
@@ -521,6 +564,14 @@ const markAsRead = async (id) => {
 
       return (
         <tr key={file?.id} onClick={() => markAsRead(file.id)} className={`${!file.is_read ? "bg-yellow-100 font-semibold" : ""}`}>
+          {user?.user?.role_id == 1 && <td><div key={file.id}>
+    <input
+      type="checkbox"
+      value={file.id}
+      onChange={(e) => handleCheckboxChange(file.id, e.target.checked)}
+    />
+    
+  </div></td>}
           <td>{index + 1}</td>
           <td onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }} className={new Date(file?.date_added).toDateString() === new Date().toDateString() ? "highlight-today" : ""}>{file?.file_id}</td>
           {/* <td>{file?.file_name}</td> */}
@@ -561,8 +612,21 @@ const markAsRead = async (id) => {
                 </span>
               )}
             </td>
+            <td>
+              <div>
+                <p>
+        {/* This document will expire in <DocumentExpiryCountdown expiryDate={expiry} /> */}
+        {console.log('first',file?.expiry_date)}
+        <BatteryTimer totalTimeMs={2*60*1000} file={file} /> 
+      </p>
+      <p className="text-gray-500 mt-2">
+        (Expires at: {expiry.toLocaleTimeString()})
+      </p>
+              </div>
+            </td>
             {/* <td>{isNew(file.date_added) && <span className="text-blue-600 font-bold">NEW</span>}</td> */}
         </tr>
+        
       );
     })}
      {filteredFiles.length === 0 && (
@@ -572,6 +636,7 @@ const markAsRead = async (id) => {
                   </td>
                 </tr>
               )}
+              {user?.user?.role_id == 1 && <tr><button onClick={handleBulkDelete}>BULK DELETE</button></tr>}
         </tbody>        
       </table>
     </div>

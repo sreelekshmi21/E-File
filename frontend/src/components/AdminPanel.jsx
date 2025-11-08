@@ -26,6 +26,10 @@ export default function AdminPanel() {
         <h5>MANAGE ROLES</h5>
         <p><Link to='/roles'>MANAGE ROLES</Link></p>
       </div>
+       <div className="card p-3 shadow-sm">
+        <h5>RED LIST PAGE</h5>
+        <p><Link to='/redlist'>RED LISTS</Link></p>
+      </div>
     </div>
   </div>
 </div>
