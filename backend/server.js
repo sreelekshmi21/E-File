@@ -1710,6 +1710,39 @@ app.get("/api/files/redlist", async (req, res) => {
 });
 
 
+app.post('/api/notes', async (req, res) => {
+  const { note, userId, fileId} = req.body;
+  if (!fileId || !userId || !note) {
+    return res.status(400).json({ error: 'File number, user, and note are required' });
+  }
+  const createdAt = new Date(); // current date & time
+  await dbPromise.query(
+    'INSERT INTO notes (note, created_by,file_id, created_at) VALUES (?, ?, ?, ?)',
+    [note, userId,fileId,createdAt]
+  );
+  res.status(201).send({ message: 'Note created' });
+});
+
+
+
+app.get('/api/documents/:id/notes', async (req, res) => {
+  const { id } = req.params;
+  
+
+  const [notes] = await dbPromise.query(`
+    SELECT n.note, n.created_at, u.username
+FROM notes n
+JOIN signup u ON n.created_by = u.id
+WHERE n.file_id = ?
+ORDER BY n.created_at DESC;
+  `, [id]);
+  res.json(notes);
+});
+
+
+
+
+
 // Bulk delete API
 app.post("/api/files/bulk-delete", async (req, res) => {
   const { fileIds } = req.body; // Expecting an array of IDs

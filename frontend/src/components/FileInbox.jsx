@@ -541,6 +541,7 @@ const handleBulkDelete = async () => {
       <table className="table table-striped table-hover table-bordered align-middle">
         <thead className="table-dark">
           <tr>
+            <th></th>
             <th scope="col">#</th>
             {/* <th scope="col">No.</th> */}
             <th scope="col">File No.</th>

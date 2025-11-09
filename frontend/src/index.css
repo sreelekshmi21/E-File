@@ -145,3 +145,10 @@ button:focus-visible {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   animation: fadeIn 0.2s ease;
 }
+.note-block{
+  border: 1px solid #ddd;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+}

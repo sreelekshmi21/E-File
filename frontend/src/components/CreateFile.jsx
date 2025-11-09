@@ -18,6 +18,9 @@ export default function CreateFile() {
   const { showToast } = useToast();
 
    const { user } = useAuth();
+   const [note, setNote] = useState('');
+
+   const [notes, setNotes] = useState([])
 
    const [fileNumber, setFileNumber] = useState("");
 
@@ -519,6 +522,8 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
   fetchComments(); // No issue here
 
+  fetchNotes();
+
   const logFileView = async () => {
     const viewedKey = `viewed_file_${fileToEdit.id}`;
     const alreadyViewed = sessionStorage.getItem(viewedKey);
@@ -591,6 +596,24 @@ const [selectedUnit, setSelectedUnit] = useState('');
             setComments(data); // assuming data is an array of comments
         } catch (error) {
             console.error('Failed to fetch comments:', error);
+        }
+    };
+
+
+    const fetchNotes = async () => {
+        try {
+            const response = await fetch(`http://localhost:5000/api/documents/${fileToEdit?.id}/notes`);
+
+    //         if (!response.ok) {
+    //   const text = await response.text(); // Get raw error message
+    //   throw new Error(`Server returned ${res.status}: ${text}`);
+    // }
+
+            const data = await response.json();
+            console.log('notes========',data)
+            setNotes(data)
+        } catch (error) {
+            console.error('Failed to fetch notes:', error);
         }
     };
 
@@ -760,6 +783,78 @@ useEffect(() => {
   }, [selectedReceiver])
   
   
+  const handleSaveNote = async () => {
+  if (!note || note.trim() === '' || note === '<p><br></p>') {
+    alert('❌ Note cannot be empty.');
+    return;
+  }
+
+  const userId = user?.user?.id;
+
+  const fileId = fileToEdit?.id;
+
+  try {
+    const response = await fetch("http://localhost:5000/api/notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note, userId, fileId}), // ✅ send JSON
+    });
+
+    const data = await response.json();
+    console.log("data=======", data);
+
+    if (response.ok) {
+      // alert("✅ Note added!");
+      showToast("Note added!", '', "success");
+      fetchNotes()
+      setNote('')
+    }
+  } catch (error) {
+    console.error("Error submitting note:", error);
+  }
+};
+      
+
+        
+    //   const eventData = {
+    //     event_type: 'commented',
+    //     file_id: id,
+    //     user_id: user?.user?.id,
+    //     origin: selectedDepartment?.value || '',
+    //     forwarded_to: receiver,
+    //     approved_by: '',
+    //     edited_by: '',
+    //     commented_by: user?.user?.username
+    //  };
+    //  console.log('event',eventData)
+    //   const response_ = await fetch("http://localhost:5000/api/file-events", {
+    //   method: "POST",
+    //   headers: {
+    //     "Content-Type": "application/json"  // ✅ Add this line
+    //  },
+    //   body: JSON.stringify(eventData)
+    //   // NOTE: Don't set Content-Type manually for FormData
+    // });
+
+    // const result_ = await response_.json()
+    // console.log('result',result_)
+
+    //   } else {
+    //     alert(`❌ Failed: ${data.error || 'Unknown error'}`);
+    //   }
+
+    // }
+    // catch (error) {
+    //   console.error('Error submitting comment:', error);
+    //   // setStatus('❌ Failed to connect to server');
+    // }
+  const handleChangeNote = (e) =>{
+    setNote(e.target.value)
+  }
+
+ 
+  
+
 
   return (
    <>
@@ -768,14 +863,24 @@ useEffect(() => {
     <Sidebar />
     {/* Left Column - Form */}
     <div className="col-md-5 bg-light border p-4"><div className="row mb-3">
-    <div className="col-md-12">
-      <label className="form-label" htmlFor="remarks">Note File:</label>
-      {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
-      <RemarksEditor formData={formData} setFormData={setFormData}
-            viewMode={viewMode} />
-      {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
-        viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/> */}
-    </div>
+      <label>Notes</label>
+      {notes.map(note => (
+  <div key={note?.id} className="note-block">
+    <p>{note?.note}</p>
+    <small>
+      — <strong>{note?.username}</strong>, {new Date(note?.created_at).toLocaleString()}
+    </small>
+  </div>
+))}
+
+    <textarea name="note" id="note" className="form-control" 
+    rows="20" 
+    value={note} 
+      onChange={handleChangeNote} 
+      disabled={viewMode}></textarea>
+      <button className="btn btn-primary mt-3" onClick={handleSaveNote}>
+        Add Note
+      </button>
   </div></div>
     <div className="col-md-5 bg-light border p-4">
       {/* <h4 className="text-center mb-4">CREATE FILE</h4>
@@ -918,6 +1023,14 @@ useEffect(() => {
       <input type="date" name="date" id="date" className="form-control" value={formData.date} onChange={handleChange} />
     </div> */}
   </div>
+   <div className="col-md-12">
+      <label className="form-label" htmlFor="remarks">Remarks:</label>
+      {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
+      <RemarksEditor formData={formData} setFormData={setFormData}
+            viewMode={viewMode} />
+      {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
+        viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/> */}
+    </div>
   {/* Row 3 */}
   <div className="row mb-3">
      {/* <div className="col-md-6 d-flex align-items-center gap-2">
