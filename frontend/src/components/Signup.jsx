@@ -10,6 +10,8 @@ const Signup = () => {
     department: ""
   });
 
+  const BASE_URL = import.meta.env.VITE_API_URL
+
   // const [toast, setToast] = useState({ show: false, title: "", body: "" });
   const { showToast } = useToast();
 
@@ -23,7 +25,7 @@ const Signup = () => {
     // alert("Signup Successful!");
     // Here you can call your API to save the data
     try {
-    const response = await fetch("http://localhost:5000/signup", {
+    const response = await fetch(`${BASE_URL}/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

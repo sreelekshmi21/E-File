@@ -126,7 +126,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   useEffect(() => {
   const getDepartments = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/departments');
+      const response = await fetch(`${BASE_URL}/api/departments`);
       const data = await response.json(); // ✅ parse response as JSON
       console.log('departments:', data);
       const options = data.map((dept) => ({
@@ -146,7 +146,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   if (!fileToEdit?.id) {
     const fetchNextFileNumber = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/next-file-number");
+        const response = await fetch(`${BASE_URL}/api/next-file-number`);
         const data = await response.json();
         setFileNumber(data?.fileNumber);
       } catch (err) {
@@ -207,7 +207,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
     if (!isEditing) {
       // For new files, use the preview number and increment the counter
       try {
-        const response = await fetch("http://localhost:5000/api/generate-file-number", {
+        const response = await fetch(`${BASE_URL}/api/generate-file-number`, {
           method: "POST"
         });
         const data = await response.json();
@@ -285,7 +285,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   };
   console.log('fileData',fileData);
   try {
-    await fetch('http://localhost:5000/api/file-events', {
+    await fetch(`${BASE_URL}/api/file-events`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -300,7 +300,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
   if(isEditing){
      try {
-    const response = await fetch(`http://localhost:5000/createfilewithattachments/${fileToEdit?.id}`, {
+    const response = await fetch(`${BASE_URL}/createfilewithattachments/${fileToEdit?.id}`, {
       method: "PUT",
       body: formDatas
       // NOTE: Don't set Content-Type manually for FormData
@@ -337,7 +337,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
      console.log(`${key}: ${value}`);
   }
      try {
-    const response = await fetch("http://localhost:5000/createfilewithattachments", {
+    const response = await fetch(`${BASE_URL}/createfilewithattachments`, {
       method: "POST",
       body: formDatas
       // NOTE: Don't set Content-Type manually for FormData
@@ -362,7 +362,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
         edited_by: ''
      };
      console.log('event',eventData)
-      const response_ = await fetch("http://localhost:5000/api/file-events", {
+      const response_ = await fetch(`${BASE_URL}/api/file-events`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"  // ✅ Add this line
@@ -462,7 +462,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
       formData.append('file', file[i]);  
     }
   try {
-    const res = await fetch("http://localhost:5000/upload", {
+    const res = await fetch(`${BASE_URL}/upload`, {
       method: "POST",
       body: formData, // no need to set Content-Type, fetch will handle it
     });
@@ -555,7 +555,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
         edited_by: ''
       };
 
-      const res = await fetch(`http://localhost:5000/api/file-events`, {
+      const res = await fetch(`${BASE_URL}/api/file-events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -584,7 +584,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
     const fetchComments = async () => {
       console.log('fetch commnets',fileToEdit?.id)
         try {
-            const response = await fetch(`http://localhost:5000/api/documents/${fileToEdit?.id}/comments`);
+            const response = await fetch(`${BASE_URL}/api/documents/${fileToEdit?.id}/comments`);
 
             if (!response.ok) {
       const text = await response.text(); // Get raw error message
@@ -602,7 +602,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
     const fetchNotes = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/documents/${fileToEdit?.id}/notes`);
+            const response = await fetch(`${BASE_URL}/api/documents/${fileToEdit?.id}/notes`);
 
     //         if (!response.ok) {
     //   const text = await response.text(); // Get raw error message
@@ -622,7 +622,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
     const handleDeleteAttachment = async (attachmentId) => {
   try {
-    const res = await fetch(`http://localhost:5000/api/attachments/${attachmentId}`, {
+    const res = await fetch(`${BASE_URL}/api/attachments/${attachmentId}`, {
       method: 'DELETE',
     });
 
@@ -658,7 +658,7 @@ useEffect(() => {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/departments/${selectedDepartment?.id}/divisions`);
+      const res = await fetch(`${BASE_URL}/api/departments/${selectedDepartment?.id}/divisions`);
       const data = await res.json();
        const options = data.map((div) => ({
           value: div?.code,
@@ -686,7 +686,7 @@ useEffect(() => {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:5000/api/divisions/${selectedDivision?.id}/units`);
+      const res = await fetch(`${BASE_URL}/api/divisions/${selectedDivision?.id}/units`);
       const data = await res.json();
       console.log('dat',data)
        const options = data.map((div) => ({
@@ -794,7 +794,7 @@ useEffect(() => {
   const fileId = fileToEdit?.id;
 
   try {
-    const response = await fetch("http://localhost:5000/api/notes", {
+    const response = await fetch(`${BASE_URL}/api/notes`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ note, userId, fileId}), // ✅ send JSON

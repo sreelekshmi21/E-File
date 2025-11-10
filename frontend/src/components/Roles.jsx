@@ -7,9 +7,11 @@ export default function Roles() {
 
     const [roles, setRoles] = useState([]);
 
+    const BASE_URL = import.meta.env.VITE_API_URL
+
   useEffect(() => {
     const fetchRoles = async() =>{
-       const res = await fetch("http://localhost:5000/api/roles")
+       const res = await fetch(`${BASE_URL}/api/roles`)
       const data = await res.json()
     //   setRoles);
     setRoles(data)
@@ -41,7 +43,7 @@ const saveChanges = async (roleId) => {
     .filter(p => p.assigned)
     .map(p => p.id);
 
-  await fetch(`http://localhost:5000/api/roles/${roleId}/permissions`, {
+  await fetch(`${BASE_URL}/api/roles/${roleId}/permissions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ permissionIds: assignedIds })

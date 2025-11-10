@@ -17,6 +17,8 @@ export default function FileInbox() {
       const [fileToDelete, setFileToDelete] = useState(null);
       const [search, setSearch] = useState("");
 
+      const BASE_URL = import.meta.env.VITE_API_URL 
+
       const [selectedFiles, setSelectedFiles] = useState([])
 
       const { user } = useAuth();
@@ -66,7 +68,7 @@ export default function FileInbox() {
 
     console.log("API Request Params:", params.toString());
 
-    const response = await fetch(`http://localhost:5000/api/files?${params.toString()}&userId=${user?.user?.id}`);
+    const response = await fetch(`${BASE_URL}/api/files?${params.toString()}&userId=${user?.user?.id}`);
     const data = await response.json();
     console.log('Fetched data:', data);
     setFiles(data);
@@ -80,7 +82,7 @@ export default function FileInbox() {
   useEffect(() => {
     const getDepartments = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/departments');
+        const response = await fetch(`${BASE_URL}/api/departments`);
         const data = await response.json(); // ✅ parse response as JSON
         console.log('departments:', data);
         const options = data.map((dept) => ({
@@ -121,7 +123,7 @@ export default function FileInbox() {
   const confirmDelete = async () =>{
     console.log('delete confirm=====================')
     try {
-      const response = await fetch(`http://localhost:5000/api/files/${fileToDelete}`, {
+      const response = await fetch(`${BASE_URL}/api/files/${fileToDelete}`, {
         method: "DELETE",
       });
 
@@ -291,7 +293,7 @@ useEffect(() => {
     //   setDivisions([]);
     // }
     try {
-      const res = await fetch(`http://localhost:5000/api/departments/${selectedDepartment?.id}/divisions`);
+      const res = await fetch(`${BASE_URL}/api/departments/${selectedDepartment?.id}/divisions`);
       const data = await res.json();
        const options = data.map((div) => ({
           value: div?.code,
@@ -320,7 +322,7 @@ useEffect(() => {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/divisions/${selectedDivision?.id}/units`);
+      const res = await fetch(`${BASE_URL}/api/divisions/${selectedDivision?.id}/units`);
       const data = await res.json();
       console.log('dat',data)
        const options = data.map((div) => ({
@@ -357,7 +359,7 @@ const isNew = (receivedAt) => {
 
 const markAsRead = async (id) => {
   try {
-    const response = await fetch(`http://localhost:5000/api/files/${id}/read`, {
+    const response = await fetch(`${BASE_URL}/api/files/${id}/read`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -400,7 +402,7 @@ const handleBulkDelete = async () => {
   if (!window.confirm("Are you sure you want to delete the selected files?")) return;
 
   try {
-    const response = await fetch("http://localhost:5000/api/files/bulk-delete", {
+    const response = await fetch(`${BASE_URL}/api/files/bulk-delete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fileIds: selectedFiles }),

@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react'
 export default function BatteryTimer({ totalTimeMs = 2*60*1000,file  }) {//3 * 60 * 1000
   const [remaining, setRemaining] = useState(totalTimeMs);
 
+  const BASE_URL = import.meta.env.VITE_API_URL 
+
    const [percentages, setPercentages] = useState(100);
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -21,7 +23,7 @@ export default function BatteryTimer({ totalTimeMs = 2*60*1000,file  }) {//3 * 6
   const handleFileExpiry = async () => {
     console.log('handleexpiry')
   try {
-    await fetch(`http://localhost:5000/api/files/${file.id}/expire`, { method: "PUT" });
+    await fetch(`${BASE_URL}/api/files/${file.id}/expire`, { method: "PUT" });
     console.log("handleexpiry ⛔ handleexpiry File expired and moved to Red List");
     // fetchFiles(); // refresh the list (optional)
   } catch (error) {

@@ -7,10 +7,12 @@ export default function UsersList() {
 
     const [users, setUsers] = useState([])
 
+    const BASE_URL = import.meta.env.VITE_API_URL 
+
     useEffect(() => {
      const getUsers = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/users');
+      const response = await fetch(`${BASE_URL}/api/users`);
       const data = await response.json(); // ✅ parse response as JSON
       console.log('users:', response,data);
       setUsers(data)
@@ -26,7 +28,7 @@ export default function UsersList() {
     const handleDelete = async (id) => {
 
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+      const res = await fetch(`${BASE_URL}/api/users/${id}`, {
         method: "DELETE",
       });
 

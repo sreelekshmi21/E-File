@@ -9,6 +9,8 @@ import { hasPermission } from '../utils/dbProvider';
 
 export default function Dashboard() {
 
+    const BASE_URL = import.meta.env.VITE_API_URL 
+
     const navigate = useNavigate();
 
     const { user } = useAuth();
@@ -28,7 +30,7 @@ export default function Dashboard() {
   async function loadTodaysFiles(departmentId) {
       console.log('today',departmentId)
       try {
-        const response = await fetch(`http://localhost:5000/api/files/today?department=${departmentId}`);
+        const response = await fetch(`${BASE_URL}/api/files/today?department=${departmentId}`);
         const data = await response.json();
         console.log('DATA===',data)
         setTodayFiles(data)
@@ -42,7 +44,7 @@ export default function Dashboard() {
 
   async function loadPendingFiles(departmentId) {
       try {
-        const response = await fetch(`http://localhost:5000/api/files?status=pending,approved,rejected&department=${departmentId}`);
+        const response = await fetch(`${BASE_URL}/api/files?status=pending,approved,rejected&department=${departmentId}`);
         const data = await response.json();
         console.log('DATA',data)
          

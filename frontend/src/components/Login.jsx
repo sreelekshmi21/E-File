@@ -7,6 +7,8 @@ export default function Login() {
 
      const { login } = useAuth();
 
+     const BASE_URL = import.meta.env.VITE_API_URL 
+
      const [loginData, setLoginData] = useState({
         username: "",
         password: "",
@@ -33,7 +35,7 @@ export default function Login() {
         // console.log("Email:", email, "Password:", password);
         // Add authentication logic here
         try {
-    const response = await fetch("http://localhost:5000/login", {
+    const response = await fetch(`${BASE_URL}/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

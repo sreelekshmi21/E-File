@@ -8,6 +8,8 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
     const editorRef = useRef(null);
     const fileInputRef = useRef(null);
 
+     const BASE_URL = import.meta.env.VITE_API_URL 
+
     const { user } = useAuth();
 
      const [selectedFiles, setSelectedFiles] = useState([]); 
@@ -61,7 +63,7 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
       formData.append('file', file);
     });
       // send to backend
-      const response = await fetch("http://localhost:5000/api/comments", {
+      const response = await fetch(`${BASE_URL}/api/comments`, {
         method: "POST",
         // headers: { "Content-Type": "application/json" },
         body: formData,
@@ -93,7 +95,7 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
         commented_by: user?.user?.username
      };
      console.log('event',eventData)
-      const response_ = await fetch("http://localhost:5000/api/file-events", {
+      const response_ = await fetch(`${BASE_URL}/api/file-events`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"  // ✅ Add this line
@@ -138,7 +140,7 @@ export default function DocumentEditor({file_id,fetchComments,viewMode, approval
           formData.append('file', file);
 
           try {
-            const res = await fetch('http://localhost:5000/api/upload', {
+            const res = await fetch(`${BASE_URL}/api/upload`, {
               method: 'POST',
               body: formData,
             });

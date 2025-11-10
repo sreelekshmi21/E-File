@@ -9,6 +9,8 @@ export default function RedList() {
 
     const [redList, setRedList] = useState([])
 
+    const BASE_URL = import.meta.env.VITE_API_URL 
+
      const { user } = useAuth();
 
      const [search, setSearch] = useState("");
@@ -18,7 +20,7 @@ export default function RedList() {
     useEffect(() => {
        
         const fetchRedList = async () =>{ 
-        const res = await fetch("http://localhost:5000/api/files/redlist")
+        const res = await fetch(`${BASE_URL}/api/files/redlist`)
         const data = await res.json()
         setRedList(data);
         }

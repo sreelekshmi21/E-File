@@ -6,13 +6,15 @@ function FileTimeline() {
   
   const [fileEvents, setFileEvents] = useState([])
 
+  const BASE_URL = import.meta.env.VITE_API_URL
+
   const location = useLocation()
   console.log('fileId',location)
   const fetchActivity = async (file) => {
     try{
       // console.log('fileId',fileId)
       const fileId = file?.fileId
-      const res = await fetch(`http://localhost:5000/api/file-events/${fileId}`)
+      const res = await fetch(`${BASE_URL}/api/file-events/${fileId}`)
       const dt = await res.json()
       console.log('dt',dt)
       setFileEvents(dt)
