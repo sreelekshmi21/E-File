@@ -4,6 +4,8 @@ import Sidebar from './Sidebar'
 import { useAuth } from '../context/AuthContext';
 import { getAttachments, hasPermission } from '../utils/dbProvider';
 import { useNavigate } from 'react-router-dom';
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function RedList() {
 
@@ -17,14 +19,14 @@ export default function RedList() {
 
      const navigate = useNavigate()
 
-    useEffect(() => {
-       
-        const fetchRedList = async () =>{ 
+      const fetchRedList = async () =>{ 
         const res = await fetch(`${BASE_URL}/api/files/redlist`)
         const data = await res.json()
         setRedList(data);
-        }
-   
+      }
+    
+    
+      useEffect(() => {
        fetchRedList()
     },[])
   
@@ -39,6 +41,31 @@ export default function RedList() {
       navigate('/createfile', { state: {fileToEdit, data, viewMode: true} });
     }
 
+
+
+    
+
+
+
+async function handleResetTimer(fileId) {
+  try {
+    const res = await fetch(`${BASE_URL}/api/files/${fileId}/reset-expiry`, {
+      method: "PUT",
+    });
+
+    const data = await res.json();
+    // console.log('handleResetTimer',data)
+
+    toast.info("⏱️ Timer reset successfully", { theme: "colored" });
+
+    // Optional: Refresh the file list so the new expiry reflects
+    // fetchFiles();
+     await fetchRedList();
+  } catch (error) {
+    console.error("Error resetting timer:", error);
+    toast.error("Failed to reset timer");
+  }
+}
 
 
   return (
@@ -105,7 +132,9 @@ export default function RedList() {
                     onClick={() => handleDeleteClick(file?.id)}>
                    Delete
                  </button>
-               </td>}               
+               </td>}   
+               <td><button onClick={() => handleResetTimer(file.id)}>
+                🔄 Reset Timer </button></td>            
              </tr>
            );
          })}
@@ -124,6 +153,7 @@ export default function RedList() {
        <Profile user={user}/>
     </div>       
      </div>   
+      <ToastContainer />
     </>
     
   )

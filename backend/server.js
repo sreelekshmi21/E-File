@@ -1766,6 +1766,25 @@ app.post("/api/files/bulk-delete", async (req, res) => {
 });
 
 
+
+app.put("/api/files/:id/reset-expiry", async (req, res) => {
+  const { id } = req.params;
+  const newExpiryDate = new Date(Date.now() + 2 * 60 * 1000); // +1 day from now
+
+  try {
+    await dbPromise.query(
+      `UPDATE files SET date_added = ?, status = 'active', expiry = 0 WHERE id = ?`,
+      [newExpiryDate, id]
+    );
+    res.json({ message: "File expiry reset successfully", newExpiryDate });
+  } catch (error) {
+    console.error("Error resetting expiry:", error);
+    res.status(500).json({ error: "Failed to reset expiry" });
+  }
+});
+
+
+
 app.use((req, res, next) => {
   console.log("Unknown route:", req.method, req.url);
   res.status(404).send("Not Found");

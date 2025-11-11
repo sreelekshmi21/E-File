@@ -20,6 +20,7 @@ export default function FileInbox() {
       const BASE_URL = import.meta.env.VITE_API_URL 
 
       const [selectedFiles, setSelectedFiles] = useState([])
+      const [selectAll, setSelectAll] = useState(false);
 
       const { user } = useAuth();
 
@@ -385,11 +386,18 @@ const markAsRead = async (id) => {
 const testExpiryDate = new Date(Date.now() + 2 * 60 * 1000); // 3 minutes from now
 const [expiry] = useState(testExpiryDate);
 
-const handleCheckboxChange = (id, checked) => {
-  setSelectedFiles((prev) =>
-    checked ? [...prev, id] : prev.filter((fid) => fid !== id)
-  );
-};
+// const handleCheckboxChange = (id, checked) => {
+//   setSelectedFiles((prev) =>
+//     checked ? [...prev, id] : prev.filter((fid) => fid !== id)
+//   );
+// };
+const handleCheckboxChange = (fileId) => {
+    setSelectedFiles((prev) =>
+      prev.includes(fileId)
+        ? prev.filter((id) => id !== fileId)
+        : [...prev, fileId]
+    );
+  };
 
 
 
@@ -412,11 +420,23 @@ const handleBulkDelete = async () => {
     alert(data.message);
 
     // Refresh the file list after deletion
-    fetchFiles();
+    // fetchFiles();
+    setFiles(files.filter(file=>!selectedFiles.includes(file.id)));
   } catch (err) {
     console.error("Error deleting files:", err);
   }
 };
+
+
+ // ✅ Select All checkbox handler
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedFiles([]); // deselect all
+    } else {
+      setSelectedFiles(files.map((f) => f.id)); // select all file IDs
+    }
+    setSelectAll(!selectAll);
+  };
 
 
 
@@ -570,8 +590,8 @@ const handleBulkDelete = async () => {
           {user?.user?.role_id == 1 && <td><div key={file.id}>
     <input
       type="checkbox"
-      value={file.id}
-      onChange={(e) => handleCheckboxChange(file.id, e.target.checked)}
+      checked={selectedFiles.includes(file.id)}
+      onChange={(e) => handleCheckboxChange(file.id)}
     />
     
   </div></td>}
@@ -619,12 +639,11 @@ const handleBulkDelete = async () => {
               <div>
                 <p>
         {/* This document will expire in <DocumentExpiryCountdown expiryDate={expiry} /> */}
-        {console.log('first',file?.expiry_date)}
-        <BatteryTimer totalTimeMs={2*60*1000} file={file} /> 
+        <BatteryTimer totalTimeMs={2 * 60 * 1000} file={file} /> 
       </p>
-      <p className="text-gray-500 mt-2">
+      {/* <p className="text-gray-500 mt-2">
         (Expires at: {expiry.toLocaleTimeString()})
-      </p>
+      </p> */}
               </div>
             </td>
             {/* <td>{isNew(file.date_added) && <span className="text-blue-600 font-bold">NEW</span>}</td> */}
@@ -639,7 +658,14 @@ const handleBulkDelete = async () => {
                   </td>
                 </tr>
               )}
-              {user?.user?.role_id == 1 && <tr><button onClick={handleBulkDelete}>BULK DELETE</button></tr>}
+              {user?.user?.role_id == 1 && <>       
+              <tr><button onClick={handleBulkDelete}>BULK DELETE</button></tr>
+              <tr><input
+          type="checkbox"
+          checked={selectAll}
+          onChange={handleSelectAll}
+        />
+        <label>Select All</label></tr></>}
         </tbody>        
       </table>
     </div>
