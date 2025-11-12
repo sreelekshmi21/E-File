@@ -587,14 +587,14 @@ const handleBulkDelete = async () => {
 
       return (
         <tr key={file?.id} onClick={() => markAsRead(file.id)} className={`${!file.is_read ? "bg-yellow-100 font-semibold" : ""}`}>
-          {user?.user?.role_id == 1 && <td><div key={file.id}>
+          {user?.user?.role_id == 1 ? <td><div key={file.id}>
     <input
       type="checkbox"
       checked={selectedFiles.includes(file.id)}
       onChange={(e) => handleCheckboxChange(file.id)}
     />
     
-  </div></td>}
+  </div></td> : <td></td>}
           <td>{index + 1}</td>
           <td onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }} className={new Date(file?.date_added).toDateString() === new Date().toDateString() ? "highlight-today" : ""}>{file?.file_id}</td>
           {/* <td>{file?.file_name}</td> */}

@@ -22,6 +22,22 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Form Data Submitted:", formData);
+    if (formData.password.length < 5) {
+    showToast("Validation Error", "Password must be at least 5 characters long.", "danger");
+    return; // Stop the form submission here
+  }
+  const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;
+  if (!specialCharPattern.test(formData.password)) {
+    showToast("Validation Error", "Password must contain at least one special character.", "danger");
+    return;
+  }
+
+  // ✅ Email validation
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(formData?.email)) {
+    showToast("Error","Please enter a valid email address.", "danger");
+    return;
+  }
     // alert("Signup Successful!");
     // Here you can call your API to save the data
     try {
