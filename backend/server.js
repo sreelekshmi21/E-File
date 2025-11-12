@@ -1769,7 +1769,7 @@ app.post("/api/files/bulk-delete", async (req, res) => {
 
 app.put("/api/files/:id/reset-expiry", async (req, res) => {
   const { id } = req.params;
-  const newExpiryDate = new Date(Date.now() + 2 * 60 * 1000); // +1 day from now
+  const newExpiryDate = new Date(); // +1 day from now
 
   try {
     await dbPromise.query(
