@@ -67,6 +67,11 @@ async function handleResetTimer(fileId) {
   }
 }
 
+const filteredFiles = redList.filter((file) =>
+    Object.values(file).some((val) =>
+      String(val).toLowerCase().includes(search.toLowerCase())
+    )
+  );
 
   return (
     <>
@@ -106,7 +111,7 @@ async function handleResetTimer(fileId) {
                </tr>
              </thead>
              <tbody id="fileTableBody">
-                  {redList.map((file, index) => {
+                  {filteredFiles.map((file, index) => {
            let badgeClass = "bg-secondary";
           
            if (file.status === "expired") badgeClass = "bg-danger";        
@@ -138,7 +143,7 @@ async function handleResetTimer(fileId) {
              </tr>
            );
          })}
-          {redList.length === 0 && (
+          {filteredFiles.length === 0 && (
                      <tr>
                        <td colSpan="11" className="text-center text-muted">
                          No files found.
