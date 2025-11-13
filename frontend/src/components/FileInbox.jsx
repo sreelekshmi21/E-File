@@ -23,6 +23,7 @@ export default function FileInbox() {
       const [selectAll, setSelectAll] = useState(false);
 
       const { user } = useAuth();
+      const [activeTab, setActiveTab] = useState("received"); // or "created"
 
       const [currentPage, setCurrentPage] = useState(1);
        const [totalPages, setTotalPages] = useState(1);
@@ -59,24 +60,21 @@ export default function FileInbox() {
   //     console.error("Error loading files:", err);
   //   }
   // }
- async function loadFiles(departmentId, division = '', unit = '', status = '') {
+ async function loadFiles(departmentId, division = '', unit = '', status = '', mode = activeTab) {
   try {
     const params = new URLSearchParams();
     if (departmentId) params.append('department', departmentId);
-     if (division) params.append('division', division);
-     if (unit) params.append('unit', unit);
+    if (division) params.append('division', division);
+    if (unit) params.append('unit', unit);
     if (status) params.append('status', status);
+    if (mode) params.append('mode', mode);
+    if (user?.user?.id) params.append('userId', user.user.id);
 
-    console.log("API Request Params:", params.toString());
-
-    const response = await fetch(`${BASE_URL}/api/files?${params.toString()}&userId=${user?.user?.id}`);
+    const response = await fetch(`${BASE_URL}/api/files?${params.toString()}`);
     const data = await response.json();
-    console.log('Fetched data:', data);
     setFiles(data);
-    return data;
   } catch (err) {
     console.error("Error loading files:", err);
-    throw err;
   }
 }
 
@@ -250,12 +248,7 @@ const handleFilterByDept = async () =>{
     setAppliedFilters({ department: deptCode, division: divCode, unit: unitCode, status });
     // Prevent alert triggered by filter-driven dataset change
     suppressNextAlertRef.current = true;
-    const result = await loadFiles(
-      deptCode,
-      divCode,
-      unitCode,
-      status
-    );
+    const result = await loadFiles(deptCode, divCode, unitCode, status, activeTab);
   } catch (e) {
     // swallow; errors are logged in loadFiles
   }
@@ -272,7 +265,7 @@ const clearFilter = () =>{
 	setAppliedFilters({ department: userDeptCode || '', division: '', unit: '', status: '' });
 	// Prevent alert triggered by filter-driven dataset change
 	suppressNextAlertRef.current = true;
-	loadFiles(userDeptCode || '', '', '', '');
+	loadFiles(userDeptCode || '', '', '', '',activeTab);
 }
 
 
@@ -466,6 +459,27 @@ const handleBulkDelete = async () => {
             {newFilesCount} new files received
           </div>
         )}
+        <div className="d-flex mb-3">
+  <button
+    className={`btn ${activeTab === 'created' ? 'btn-primary' : 'btn-outline-primary'} me-2`}
+    onClick={() => {
+      setActiveTab('created');
+      loadFiles(selectedDepartment?.value || user?.user?.department, selectedDivision?.value, selectedUnit?.value, approvalStatus, 'created');
+    }}
+  >
+    📤 Created Files
+  </button>
+  
+  <button
+    className={`btn ${activeTab === 'received' ? 'btn-primary' : 'btn-outline-primary'}`}
+    onClick={() => {
+      setActiveTab('received');
+      loadFiles(selectedDepartment?.value || user?.user?.department, selectedDivision?.value, selectedUnit?.value, approvalStatus, 'received');
+    }}
+  >
+    📥 Received Files
+  </button>
+</div>
     <div>
             <Select
         options={departments}

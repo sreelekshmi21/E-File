@@ -877,15 +877,15 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
 // });
 app.get("/api/files", (req, res) => {
   console.log("API /api/files called with query:", req.query);
-  
+
   const statusParam = req.query.status;
-  const departmentId = req.query.department; // logged-in department
+  const departmentId = req.query.department;
   const division = req.query.division;
   const unit = req.query.unit;
+  const mode = req.query.mode; // ✅ 'created' or 'received'
 
   const isGSO = departmentId && departmentId.toUpperCase() === "OGS";
 
-  // ✅ Helper to run final query
   const executeQuery = (query, values) => {
     console.log("Final Query:", query);
     console.log("Values:", values);
@@ -911,10 +911,18 @@ app.get("/api/files", (req, res) => {
     let query = `SELECT * FROM files WHERE LOWER(status) IN (${filteredStatuses.map(() => '?').join(', ')})`;
     const values = [...filteredStatuses];
 
-    // ✅ Show created OR addressed files (except GSO)
+    // ✅ Apply "mode" logic
     if (!isGSO) {
-      query += ` AND (department = ? OR receiver = ?)`;
-      values.push(departmentId, departmentId);
+      if (mode === "created") {
+        query += ` AND department = ?`;
+        values.push(departmentId);
+      } else if (mode === "received") {
+        query += ` AND receiver = ?`;
+        values.push(departmentId);
+      } else {
+        query += ` AND (department = ? OR receiver = ?)`;
+        values.push(departmentId, departmentId);
+      }
     }
 
     if (division) {
@@ -937,8 +945,16 @@ app.get("/api/files", (req, res) => {
   const values = [];
 
   if (!isGSO) {
-    conditions.push(`(department = ? OR receiver = ?)`);
-    values.push(departmentId, departmentId);
+    if (mode === "created") {
+      conditions.push(`department = ?`);
+      values.push(departmentId);
+    } else if (mode === "received") {
+      conditions.push(`receiver = ?`);
+      values.push(departmentId);
+    } else {
+      conditions.push(`(department = ? OR receiver = ?)`);
+      values.push(departmentId, departmentId);
+    }
   }
 
   if (division) {
