@@ -351,8 +351,11 @@ app.get("/", (req, res) => {
 
 
 app.post("/signup", async (req, res) => {
-  const { username, password, email, department } = req.body;
+  const { username, password, email, department, role_id } = req.body;
 
+  if (!username || !password || !role_id) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
   try {
     // Check if username already exists
     const checkUserQuery = "SELECT username FROM signup WHERE username = ?";
@@ -371,10 +374,10 @@ app.post("/signup", async (req, res) => {
 
       // Insert user
       const insertQuery =
-        "INSERT INTO signup (username, passwd, email, department) VALUES (?, ?, ?, ?)";
+        "INSERT INTO signup (username, passwd, email, department, role_id) VALUES (?, ?, ?, ?, ?)";
       db.query(
         insertQuery,
-        [username, password, email, department],
+        [username, password, email, department, role_id],
         (err, result) => {
           if (err) {
             console.error("Insert error:", err);

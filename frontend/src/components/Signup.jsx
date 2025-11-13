@@ -7,7 +7,8 @@ const Signup = () => {
     username: "",
     password: '',
     email: "",
-    department: ""
+    department: "",
+    role_id: "2", // default: staff
   });
 
   const BASE_URL = import.meta.env.VITE_API_URL
@@ -139,16 +140,36 @@ const Signup = () => {
               required
             />
           </div>
-
+          <div className="mb-3">
+            <label className="form-label">Select Role</label>
+              <select name="role_id"
+                     value={formData.role_id}
+                     onChange={handleChange}
+                      required>
+                  <option value="1">Admin</option>
+                  <option value="2">Staff</option>
+                  <option value="3">Viewer</option>
+              </select>
+          </div>
           <button type="submit" className="btn btn-primary w-100">
            Signup
           </button>
-        </form>
+        </form> 
         <div className="text-center mt-3">
           <nav>
             <ul>
                 <li>
                     <Link to='/'>Back To Login</Link> 
+                </li>
+            </ul>
+            
+          </nav>
+        </div>
+         <div className="text-center mt-3">
+          <nav>
+            <ul>
+                <li>
+                    <Link to='/adminpanel'>Back to Admin Panel</Link>
                 </li>
             </ul>
             
