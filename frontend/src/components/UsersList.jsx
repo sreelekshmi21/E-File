@@ -9,6 +9,12 @@ export default function UsersList() {
 
     const BASE_URL = import.meta.env.VITE_API_URL 
 
+    const ROLE_NAMES = {
+            1: "Admin",
+            2: "Staff",
+            3: "Viewer",
+   };
+
     useEffect(() => {
      const getUsers = async () => {
     try {
@@ -67,7 +73,7 @@ export default function UsersList() {
           <td>{user.username}</td>
           <td>{user.email}</td>
           <td>{user.department}</td>
-          <td>{user.role_id}</td>
+          <td>{ROLE_NAMES[user.role_id]}</td>
           <td><button onClick={() => handleDelete(user?.id)}>DELETE</button></td>
         </tr>
       ))}
