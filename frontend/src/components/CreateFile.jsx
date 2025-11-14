@@ -7,6 +7,7 @@ import { getAttachments, hasPermission } from '../utils/dbProvider';
 import { useAuth } from '../context/AuthContext';
 import Select from 'react-select';
 import RemarksEditor from './RemarksEditor';
+import ReusableModal from '../utils/ReusableModal';
 
 
 
@@ -16,6 +17,8 @@ export default function CreateFile() {
 
   const navigate = useNavigate()
   const { showToast } = useToast();
+
+  const [showModal, setShowModal] = useState(false);
 
    const { user } = useAuth();
    const [note, setNote] = useState('');
@@ -853,8 +856,40 @@ useEffect(() => {
   }
 
  
+  const handleHighPriority = () =>{
+    setShowModal(true)
+  }
   
 
+  // const user = localStorage.getItem("user");
+  console.log('token',user?.user?.token)
+
+
+  const confirmHighPriority = async (id) =>{
+    console.log('highPrio')
+    try {
+    const response = await fetch(`${BASE_URL}/api/files/${id}/request-priority`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+         Authorization: `Bearer ${user?.user?.token}`
+      }
+    });
+
+    const data = await response.json(); 
+    console.log('data=====',response, data)
+
+    if (response.ok) {
+      // alert("High priority request sent!");
+      showToast(data.message, "", "success"); // <-- SHOW SERVER MESSAGE
+    } else {
+      showToast(data.message || "Something went wrong", "", "error");
+    }
+  } catch (error) {
+    console.error(error);
+    showToast("Network error", "error");
+  }
+  }
 
   return (
    <>
@@ -1186,8 +1221,10 @@ useEffect(() => {
       File Timeline
     </button>
     </div>
+    
   </div>
 )}
+ 
       {/* Add more rows as per previous layout */}
       
       {/* Final Save Button */}
@@ -1231,6 +1268,9 @@ useEffect(() => {
         viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/>
         {/* Optional: Show Timeline Button */}
         {/* <button className="btn btn-success px-5 mt-3" onClick={handleTimeline}>Show Timeline</button> */}
+        <div style={{marginTop: "20px"}}><button 
+             className="btn btn-warning px-5"
+             onClick={handleHighPriority}>Request High Priority</button></div>
       </div>
     
 {/* <div class="card w-75">
@@ -1243,6 +1283,14 @@ useEffect(() => {
     </div>
   </div>
 </div>
+{showModal && <ReusableModal 
+                      showModal={showModal} 
+                      setShowModal={setShowModal} 
+                      title="Confirm High Priority"
+                      message="Are you sure you want to request admin approval to mark this file as High Priority?"
+                      confirmText="Send High Priority Request"
+                      confirmVariant="danger"
+                      onConfirm={() => confirmHighPriority(fileToEdit?.id)}/>}
     </>
   )
 }

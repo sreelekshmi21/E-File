@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react'
-import DeleteModal from './DeleteModal';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { getAttachments, hasPermission } from '../utils/dbProvider';
@@ -8,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import Profile from './Profile';
 import DocumentExpiryCountdown from './DocumentExpiryCountdown';
 import BatteryTimer from './BatteryTimer';
+import ReusableModal from '../utils/ReusableModal';
+import { useToast } from '../context/ToastContext';
 
 
 export default function FileInbox() {
@@ -18,6 +19,8 @@ export default function FileInbox() {
       const [search, setSearch] = useState("");
 
       const BASE_URL = import.meta.env.VITE_API_URL 
+
+      const { showToast } = useToast();
 
       const [selectedFiles, setSelectedFiles] = useState([])
       const [selectAll, setSelectAll] = useState(false);
@@ -433,6 +436,20 @@ const handleBulkDelete = async () => {
 
 
 
+  const loadHighPriorityFiles = async (departmentId) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/api/files/high-priority/${departmentId}`
+    );
+
+    const data = await response.json();
+
+    setFiles(data);  // same state you use for Created / Received
+  } catch (error) {
+    console.error("Failed to load high priority files:", error);
+  }
+};
+
 
   return (
     <>
@@ -479,6 +496,20 @@ const handleBulkDelete = async () => {
   >
     📥 Received Files
   </button>
+
+  <button
+  className={`btn ${
+    activeTab === 'highpriority' ? 'btn-danger' : 'btn-outline-danger'
+  } me-2`}
+  onClick={() => {
+    setActiveTab('highpriority');
+    loadHighPriorityFiles(
+      selectedDepartment?.value || user?.user?.department
+    );
+  }}
+>
+  🚨 High Priority Files
+</button>
 </div>
     <div>
             <Select
@@ -718,7 +749,14 @@ const handleBulkDelete = async () => {
   </button>
 </div> */}
 </div>
-    {showModal && <DeleteModal showModal={showModal} setShowModal={setShowModal} confirmDelete={confirmDelete}/>}
+    {showModal && <ReusableModal 
+                      showModal={showModal} 
+                      setShowModal={setShowModal} 
+                      title="Confirm Delete"
+                      message="Are you sure you want to delete this file?"
+                      confirmText="Delete"
+                      confirmVariant="danger"
+                      onConfirm={confirmDelete}/>}
     </>
   )
 }

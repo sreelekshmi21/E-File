@@ -30,6 +30,10 @@ export default function AdminPanel() {
         <h5>RED LIST PAGE</h5>
         <p><Link to='/redlist'>RED LISTS</Link></p>
       </div>
+      <div className="card p-3 shadow-sm">
+        <h5>HIGH PRIORITY REQUESTS</h5>
+        <p><Link to='/highpriority'>HIGH PRIORITY REQUESTS</Link></p>
+      </div>
     </div>
   </div>
 </div>

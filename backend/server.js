@@ -1803,6 +1803,183 @@ app.put("/api/files/:id/reset-expiry", async (req, res) => {
 });
 
 
+function verifyToken(req, res, next) {
+  const token = req.headers.authorization?.split(" ")[1];
+  // console.log('req',req.headers.authorization,'============================', req.headers.authorization?.split(" ")[1])
+
+  // const token = req.headers.authorization;
+   console.log('secret kwy=======================',SECRET_KEY)
+  if (!token) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  try {
+     console.log('decoded================',token, '===================',SECRET_KEY)
+    const decoded = jwt.verify(token, SECRET_KEY);
+    console.log('decoded================',decoded)
+    req.user = decoded;  // <-- NOW req.user is available
+    next();
+  } catch (err) {
+    return res.status(403).json({ error: "Invalid token" });
+  }
+}
+
+
+app.post("/api/files/:id/request-priority", verifyToken, async (req, res) => {
+  const fileId = req.params.id;
+  const userId = req.user.id;
+  console.log('fileId=================',fileId,userId)
+
+  try {
+    // Check if already pending
+    const [pending] = await dbPromise.query(
+      "SELECT * FROM priority_requests WHERE file_id = ? AND status = 'pending'",
+      [fileId]
+    );
+
+    if (pending.length > 0) {
+      return res.status(400).json({ message: "A request is already pending." });
+    }
+
+    // Create request
+    await dbPromise.query(
+      "INSERT INTO priority_requests (file_id, requested_by, status) VALUES (?, ?, 'pending')",
+      [fileId, userId]
+    );
+
+    return res.json({
+      message: "High priority request submitted to admin.",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+app.get("/api/admin/priority-requests", async (req, res) => {
+  try {
+    const [rows] = await dbPromise.query(
+      `SELECT 
+          pr.id AS request_id,
+          pr.file_id,
+          f.file_subject,
+          f.department AS file_department,
+          f.file_id AS fileId,
+          pr.requested_by,
+          u.username AS requested_by_username,
+          u.department AS requested_by_department,
+          pr.status,
+          pr.created_at
+       FROM priority_requests pr
+       JOIN files f ON pr.file_id = f.id
+       JOIN signup u ON pr.requested_by = u.id
+       WHERE pr.status = 'pending'
+       ORDER BY pr.created_at DESC`
+    );
+
+    res.json(rows);
+
+  } catch (error) {
+    console.error("Error fetching priority requests:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
+app.put(`/api/admin/priority-requests/:requestId/approve`, async (req, res) => {
+  const requestId = req.params.requestId;
+
+  try {
+    // Get file_id from priority_requests
+    const [requestRows] = await dbPromise.query(
+      "SELECT file_id FROM priority_requests WHERE id = ?",
+      [requestId]
+    );
+
+    if (requestRows.length === 0) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
+    const fileId = requestRows[0].file_id;
+
+    // Update priority request status
+    await dbPromise.query(
+      "UPDATE priority_requests SET status = 'approved' WHERE id = ?",
+      [requestId]
+    );
+
+    // Mark the file as high priority
+    await dbPromise.query(
+      "UPDATE files SET is_high_priority = 1 WHERE id = ?",
+      [fileId]
+    );
+
+    res.json({
+      success: true,
+      message: "High priority request approved and file updated."
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to approve the request." });
+  }
+});
+
+
+
+app.put("/api/admin/priority-requests/:requestId/reject", async (req, res) => {
+  const requestId = req.params.requestId;
+
+  try {
+    // 1️⃣ Check if request exists
+    const [requestRows] = await dbPromise.query(
+      "SELECT file_id FROM priority_requests WHERE id = ?",
+      [requestId]
+    );
+
+    if (requestRows.length === 0) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
+    // 2️⃣ Update priority request status to rejected
+    await dbPromise.query(
+      "UPDATE priority_requests SET status = 'rejected' WHERE id = ?",
+      [requestId]
+    );
+
+    res.json({
+      success: true,
+      message: "High priority request rejected."
+    });
+
+  } catch (error) {
+    console.error("Reject Error:", error);
+    res.status(500).json({ error: "Failed to reject the request." });
+  }
+});
+
+
+app.get("/api/files/high-priority/:departmentId", async (req, res) => {
+  const departmentId = req.params.departmentId;
+
+  try {
+    const [rows] = await dbPromise.query(
+      `SELECT * FROM files 
+       WHERE is_high_priority = 1 
+       AND receiver = ?
+       ORDER BY date_added DESC`,
+      [departmentId]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch high priority files" });
+  }
+});
+
+
 
 app.use((req, res, next) => {
   console.log("Unknown route:", req.method, req.url);
