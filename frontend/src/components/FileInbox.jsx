@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react'
-import DeleteModal from './DeleteModal';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { getAttachments, hasPermission } from '../utils/dbProvider';
@@ -8,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import Profile from './Profile';
 import DocumentExpiryCountdown from './DocumentExpiryCountdown';
 import BatteryTimer from './BatteryTimer';
+import ReusableModal from '../utils/ReusableModal';
+import { useToast } from '../context/ToastContext';
 
 
 export default function FileInbox() {
@@ -18,6 +19,8 @@ export default function FileInbox() {
       const [search, setSearch] = useState("");
 
       const BASE_URL = import.meta.env.VITE_API_URL 
+
+      const { showToast } = useToast();
 
       const [selectedFiles, setSelectedFiles] = useState([])
       const [selectAll, setSelectAll] = useState(false);
@@ -83,13 +86,12 @@ export default function FileInbox() {
       try {
         const response = await fetch(`${BASE_URL}/api/departments`);
         const data = await response.json(); // ✅ parse response as JSON
-        console.log('departments:', data);
         const options = data.map((dept) => ({
           value: dept.code,
           label: `${dept.dept_name} (${dept.code})`,
           id: dept?.id
         }));
-        console.log('options:',options)
+        // console.log('options:',options)
         setDepartments(options); // ✅ now set actual department data
         // Preselect user's department if available
         const userDeptCode = user?.user?.department;
@@ -108,19 +110,19 @@ export default function FileInbox() {
     //   console.log('LC',user)
     //   const departmentId = user?.department
     //   console.log('LC',departmentId)
-    console.log('user',user)
+    // console.log('user',user)
     const departmentId = user?.user?.department
       if (departmentId) {
     loadFiles(departmentId);
   }
-       
+      
   }, [])
+
 
 
   
 
   const confirmDelete = async () =>{
-    console.log('delete confirm=====================')
     try {
       const response = await fetch(`${BASE_URL}/api/files/${fileToDelete}`, {
         method: "DELETE",
@@ -143,7 +145,6 @@ export default function FileInbox() {
   }
   
   const handleDeleteClick = (id) => {
-    console.log('handleDeleteClick id',id)
     setFileToDelete(id);
     setShowModal(true);
   };
@@ -277,7 +278,7 @@ useEffect(() => {
       return;
     }
 
-    console.log('selDept',selectedDepartment,selectedDepartment?.code)
+    // console.log('selDept',selectedDepartment,selectedDepartment?.code)
     // try {
     //   const res = await fetch(`http://localhost:5000/api/divisions/${selectedDepartment?.value}`);
     //   const data = await res.json();
@@ -294,7 +295,7 @@ useEffect(() => {
           label: `${div?.name} (${div?.code})`,
           id: div?.id
         }));
-        console.log('dsivisions',options)
+        // console.log('dsivisions',options)
       setDivisions(options);
       setSelectedDivision(null)
     } catch (error) {
@@ -433,6 +434,23 @@ const handleBulkDelete = async () => {
 
 
 
+  const loadHighPriorityFiles = async (departmentId) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/api/files/high-priority/${departmentId}`
+    );
+
+    const data = await response.json();
+
+    setFiles(data);  // same state you use for Created / Received
+  } catch (error) {
+    console.error("Failed to load high priority files:", error);
+  }
+};
+
+
+  
+
 
   return (
     <>
@@ -471,7 +489,7 @@ const handleBulkDelete = async () => {
   </button>
   
   <button
-    className={`btn ${activeTab === 'received' ? 'btn-primary' : 'btn-outline-primary'}`}
+    className={`btn ${activeTab === 'received' ? 'btn-primary' : 'btn-outline-primary'} me-2`}
     onClick={() => {
       setActiveTab('received');
       loadFiles(selectedDepartment?.value || user?.user?.department, selectedDivision?.value, selectedUnit?.value, approvalStatus, 'received');
@@ -479,6 +497,20 @@ const handleBulkDelete = async () => {
   >
     📥 Received Files
   </button>
+
+  <button
+  className={`btn ${
+    activeTab === 'highpriority' ? 'btn-danger' : 'btn-outline-danger'
+  } me-2`}
+  onClick={() => {
+    setActiveTab('highpriority');
+    loadHighPriorityFiles(
+      selectedDepartment?.value || user?.user?.department
+    );
+  }}
+>
+  🚨 High Priority Files
+</button>
 </div>
     <div>
             <Select
@@ -620,7 +652,6 @@ const handleBulkDelete = async () => {
           </td>
           {/* <td>{file.inwardnum}</td> */}
           {/* <td>{file.outwardnum}</td> */}
-          {console.log('rec===',file?.receiver)}
           <td>{file?.receiver}</td>
           {/* <td>{file?.remarks}</td> */}
           <td>
@@ -649,16 +680,12 @@ const handleBulkDelete = async () => {
                 </span>
               )}
             </td>
-            <td>
-              <div>
-                <p>
+            <td>               
         {/* This document will expire in <DocumentExpiryCountdown expiryDate={expiry} /> */}
-        <BatteryTimer totalTimeMs={2 * 60 * 1000} file={file} /> 
-      </p>
+        <BatteryTimer totalTimeMs={2 * 60 * 1000} file={file} />      
       {/* <p className="text-gray-500 mt-2">
         (Expires at: {expiry.toLocaleTimeString()})
       </p> */}
-              </div>
             </td>
             {/* <td>{isNew(file.date_added) && <span className="text-blue-600 font-bold">NEW</span>}</td> */}
         </tr>
@@ -673,13 +700,13 @@ const handleBulkDelete = async () => {
                 </tr>
               )}
               {user?.user?.role_id == 1 && <>       
-              <tr><button onClick={handleBulkDelete}>BULK DELETE</button></tr>
-              <tr><input
+              <tr><td><button onClick={handleBulkDelete}>BULK DELETE</button></td></tr>
+              <tr><td><input
           type="checkbox"
           checked={selectAll}
           onChange={handleSelectAll}
         />
-        <label>Select All</label></tr></>}
+        <label>Select All</label></td></tr></>}
         </tbody>        
       </table>
     </div>
@@ -718,7 +745,14 @@ const handleBulkDelete = async () => {
   </button>
 </div> */}
 </div>
-    {showModal && <DeleteModal showModal={showModal} setShowModal={setShowModal} confirmDelete={confirmDelete}/>}
+    {showModal && <ReusableModal 
+                      showModal={showModal} 
+                      setShowModal={setShowModal} 
+                      title="Confirm Delete"
+                      message="Are you sure you want to delete this file?"
+                      confirmText="Delete"
+                      confirmVariant="danger"
+                      onConfirm={confirmDelete}/>}
     </>
   )
 }

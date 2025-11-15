@@ -15,6 +15,7 @@ import AdminPanel from './components/AdminPanel'
 import UsersList from './components/UsersList'
 import Roles from './components/Roles'
 import RedList from './components/RedList'
+import HighPriorityList from './components/HighPriorityList'
 
 function App() {
 
@@ -30,6 +31,7 @@ function App() {
     { path: "/users", element: <UsersList /> },
     { path: "/roles", element: <Roles /> },
     { path: "/redlist", element: <RedList /> },
+    { path: "/highpriority", element: <HighPriorityList /> },
   ]);
   return routes;
 };
