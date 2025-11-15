@@ -60,7 +60,8 @@ export default function Login() {
       // ✅ Reset form after login
       setLoginData({ username: "", password: "" });
     } else {
-      alert("Login failed: " + data.error);
+      // alert("Login failed: " + data.error);
+      showToast("Login Failed", data.error || "Invalid credentials", "danger")
     }
   } catch (error) {
     console.error("Error logging in:", error);

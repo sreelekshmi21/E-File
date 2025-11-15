@@ -133,7 +133,7 @@ export default function BatteryTimer({ totalTimeMs = 2 * 60 * 1000, file }) {
      setExpired(true);
     try {
       await fetch(`${BASE_URL}/api/files/${file.id}/expire`, { method: "PUT" });
-      console.log("⛔ File expired and moved to Red List");
+      // console.log("⛔ File expired and moved to Red List");
 
           if (
         user &&

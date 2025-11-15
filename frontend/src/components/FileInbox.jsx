@@ -86,13 +86,12 @@ export default function FileInbox() {
       try {
         const response = await fetch(`${BASE_URL}/api/departments`);
         const data = await response.json(); // ✅ parse response as JSON
-        console.log('departments:', data);
         const options = data.map((dept) => ({
           value: dept.code,
           label: `${dept.dept_name} (${dept.code})`,
           id: dept?.id
         }));
-        console.log('options:',options)
+        // console.log('options:',options)
         setDepartments(options); // ✅ now set actual department data
         // Preselect user's department if available
         const userDeptCode = user?.user?.department;
@@ -111,7 +110,7 @@ export default function FileInbox() {
     //   console.log('LC',user)
     //   const departmentId = user?.department
     //   console.log('LC',departmentId)
-    console.log('user',user)
+    // console.log('user',user)
     const departmentId = user?.user?.department
       if (departmentId) {
     loadFiles(departmentId);
@@ -279,7 +278,7 @@ useEffect(() => {
       return;
     }
 
-    console.log('selDept',selectedDepartment,selectedDepartment?.code)
+    // console.log('selDept',selectedDepartment,selectedDepartment?.code)
     // try {
     //   const res = await fetch(`http://localhost:5000/api/divisions/${selectedDepartment?.value}`);
     //   const data = await res.json();
@@ -296,7 +295,7 @@ useEffect(() => {
           label: `${div?.name} (${div?.code})`,
           id: div?.id
         }));
-        console.log('dsivisions',options)
+        // console.log('dsivisions',options)
       setDivisions(options);
       setSelectedDivision(null)
     } catch (error) {
@@ -681,16 +680,12 @@ const handleBulkDelete = async () => {
                 </span>
               )}
             </td>
-            <td>
-              <div>
-                <p>
+            <td>               
         {/* This document will expire in <DocumentExpiryCountdown expiryDate={expiry} /> */}
-        <BatteryTimer totalTimeMs={2 * 60 * 1000} file={file} /> 
-      </p>
+        <BatteryTimer totalTimeMs={2 * 60 * 1000} file={file} />      
       {/* <p className="text-gray-500 mt-2">
         (Expires at: {expiry.toLocaleTimeString()})
       </p> */}
-              </div>
             </td>
             {/* <td>{isNew(file.date_added) && <span className="text-blue-600 font-bold">NEW</span>}</td> */}
         </tr>
@@ -705,13 +700,13 @@ const handleBulkDelete = async () => {
                 </tr>
               )}
               {user?.user?.role_id == 1 && <>       
-              <tr><button onClick={handleBulkDelete}>BULK DELETE</button></tr>
-              <tr><input
+              <tr><td><button onClick={handleBulkDelete}>BULK DELETE</button></td></tr>
+              <tr><td><input
           type="checkbox"
           checked={selectAll}
           onChange={handleSelectAll}
         />
-        <label>Select All</label></tr></>}
+        <label>Select All</label></td></tr></>}
         </tbody>        
       </table>
     </div>

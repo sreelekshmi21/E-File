@@ -28,11 +28,11 @@ export default function Dashboard() {
   };
 
   async function loadTodaysFiles(departmentId) {
-      console.log('today',departmentId)
+      // console.log('today',departmentId)
       try {
         const response = await fetch(`${BASE_URL}/api/files/today?department=${departmentId}`);
         const data = await response.json();
-        console.log('DATA===',data)
+        // console.log('DATA===',data)
         setTodayFiles(data)
          
    
@@ -46,7 +46,7 @@ export default function Dashboard() {
       try {
         const response = await fetch(`${BASE_URL}/api/files?status=pending,approved,rejected&department=${departmentId}`);
         const data = await response.json();
-        console.log('DATA',data)
+        // console.log('DATA',data)
          
          setPendingFiles(data.filter(file => file.status.toLowerCase() === 'pending'));
       setApprovedFiles(data.filter(file => file.status.toLowerCase() === 'approved'));
@@ -101,7 +101,7 @@ export default function Dashboard() {
     };
   }, [user?.user?.department]);
     
-  console.log('USER',user)
+  
 
   
   return (

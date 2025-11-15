@@ -81,7 +81,7 @@ const filteredFiles = redList.filter((file) =>
        <div className="col-md-9">        
        <div className="card shadow-lg">
          <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-           <h4 className="mb-0">📑 RED LIST FILES</h4>           
+           <h4 className="mb-0">📑 RED LIST FILES AND RESET TIMER</h4>           
             <input
                  type="text"
                  className="form-control w-25"
