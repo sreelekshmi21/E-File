@@ -23,8 +23,8 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Form Data Submitted:", formData);
-    if (formData.password.length < 5) {
-    showToast("Validation Error", "Password must be at least 5 characters long.", "danger");
+    if (formData.password.length < 8) {
+    showToast("Validation Error", "Password must be at least 8 characters long.", "danger");
     return; // Stop the form submission here
   }
   const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;

@@ -485,7 +485,7 @@ app.post("/login", async (req, res) => {
     const token = jwt.sign(
       { id: user.id, username: user.username, role_id: user.role_id },
       SECRET_KEY,
-      { expiresIn: '1h' }
+      { expiresIn: '24h' }
     );
 
     // ✅ Success
@@ -1808,15 +1808,12 @@ function verifyToken(req, res, next) {
   // console.log('req',req.headers.authorization,'============================', req.headers.authorization?.split(" ")[1])
 
   // const token = req.headers.authorization;
-   console.log('secret kwy=======================',SECRET_KEY)
   if (!token) {
     return res.status(401).json({ error: "No token provided" });
   }
 
   try {
-     console.log('decoded================',token, '===================',SECRET_KEY)
     const decoded = jwt.verify(token, SECRET_KEY);
-    console.log('decoded================',decoded)
     req.user = decoded;  // <-- NOW req.user is available
     next();
   } catch (err) {
@@ -1828,7 +1825,6 @@ function verifyToken(req, res, next) {
 app.post("/api/files/:id/request-priority", verifyToken, async (req, res) => {
   const fileId = req.params.id;
   const userId = req.user.id;
-  console.log('fileId=================',fileId,userId)
 
   try {
     // Check if already pending
@@ -1977,6 +1973,18 @@ app.get("/api/files/high-priority/:departmentId", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch high priority files" });
   }
+});
+
+
+app.get("/api/high-priority/status", async (req, res) => {
+  const { fileId, userId } = req.query;
+
+  const [rows] = await dbPromise.query(
+    "SELECT status FROM priority_requests WHERE file_id=? AND requested_by=? ORDER BY id DESC LIMIT 1",
+    [fileId, userId]
+  );
+
+  res.json(rows[0] || { status: null });
 });
 
 

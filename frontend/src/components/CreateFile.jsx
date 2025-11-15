@@ -145,6 +145,8 @@ const [selectedUnit, setSelectedUnit] = useState('');
 
   getDepartments();
 
+  checkApproval(fileToEdit?.id); 
+
   // Fetch preview of next file number for new files (not when editing)
   if (!fileToEdit?.id) {
     const fetchNextFileNumber = async () => {
@@ -860,13 +862,9 @@ useEffect(() => {
     setShowModal(true)
   }
   
-
-  // const user = localStorage.getItem("user");
-  console.log('token',user?.user?.token)
-
+  
 
   const confirmHighPriority = async (id) =>{
-    console.log('highPrio')
     try {
     const response = await fetch(`${BASE_URL}/api/files/${id}/request-priority`, {
       method: "POST",
@@ -877,19 +875,32 @@ useEffect(() => {
     });
 
     const data = await response.json(); 
-    console.log('data=====',response, data)
-
     if (response.ok) {
-      // alert("High priority request sent!");
       showToast(data.message, "", "success"); // <-- SHOW SERVER MESSAGE
     } else {
       showToast(data.message || "Something went wrong", "", "error");
     }
+    setShowModal(false)
   } catch (error) {
     console.error(error);
     showToast("Network error", "error");
   }
   }
+
+
+  async function checkApproval(fileId) {
+      const res = await fetch(`${BASE_URL}/api/high-priority/status?fileId=${fileId}&userId=${user?.user?.id}`);
+      const data = await res.json();
+      if (data.status === "approved") {
+        showToast("Your High Priority request was approved ✔️",'','success');
+      }
+  
+      if (data.status === "rejected") {
+        showToast("Your High Priority request was rejected ❌", '','error');
+      }
+    }
+  
+
 
   return (
    <>

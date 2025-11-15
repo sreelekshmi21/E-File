@@ -116,14 +116,14 @@ export default function FileInbox() {
       if (departmentId) {
     loadFiles(departmentId);
   }
-       
+      
   }, [])
+
 
 
   
 
   const confirmDelete = async () =>{
-    console.log('delete confirm=====================')
     try {
       const response = await fetch(`${BASE_URL}/api/files/${fileToDelete}`, {
         method: "DELETE",
@@ -146,7 +146,6 @@ export default function FileInbox() {
   }
   
   const handleDeleteClick = (id) => {
-    console.log('handleDeleteClick id',id)
     setFileToDelete(id);
     setShowModal(true);
   };
@@ -451,6 +450,9 @@ const handleBulkDelete = async () => {
 };
 
 
+  
+
+
   return (
     <>
     <div className="container mt-5">
@@ -488,7 +490,7 @@ const handleBulkDelete = async () => {
   </button>
   
   <button
-    className={`btn ${activeTab === 'received' ? 'btn-primary' : 'btn-outline-primary'}`}
+    className={`btn ${activeTab === 'received' ? 'btn-primary' : 'btn-outline-primary'} me-2`}
     onClick={() => {
       setActiveTab('received');
       loadFiles(selectedDepartment?.value || user?.user?.department, selectedDivision?.value, selectedUnit?.value, approvalStatus, 'received');
@@ -651,7 +653,6 @@ const handleBulkDelete = async () => {
           </td>
           {/* <td>{file.inwardnum}</td> */}
           {/* <td>{file.outwardnum}</td> */}
-          {console.log('rec===',file?.receiver)}
           <td>{file?.receiver}</td>
           {/* <td>{file?.remarks}</td> */}
           <td>
