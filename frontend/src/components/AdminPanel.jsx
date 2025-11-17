@@ -10,31 +10,36 @@ export default function AdminPanel() {
       title: "Manage Users",
       desc: "Add users",
       icon: "bi-people",
-      route: "/signup"
+      route: "/signup",
+      bg: "bg-info"
     },
     {
       title: "Users List",
       desc: "List of users",
       icon: "bi-building",
-      route: "/users"
+      route: "/users",
+      bg: "bg-light"
     },
     {
       title: "Roles & Permissions",
       desc: "Set user access levels",
       icon: "bi-shield-lock",
-      route: "/roles"
+      route: "/roles",
+      bg: "bg-info" 
     },
     {
       title: "High Priority Requests",
       desc: "Approve priority file requests",
       icon: "bi-exclamation-circle",
-      route: "/highpriority"
+      route: "/highpriority",
+      bg: "bg-warning" 
     },
     {
       title: "Red List Files",
       desc: "Monitor red list files and Reset file expiry timer",
       icon: "bi-lightning-charge",
-      route: "/redlist"
+      route: "/redlist",
+      bg: "bg-danger" 
     },
     // {
     //   title: "Reset Timer",
@@ -63,7 +68,7 @@ export default function AdminPanel() {
       {cards.map((card, index) => (
         <div className="col-12 col-sm-6 col-md-4 col-lg-3" key={index}>
           <div
-            className="card dashboard-card shadow-sm p-3 h-100"
+            className={`card dashboard-card shadow-sm p-3 h-100 ${card.bg}`}
             onClick={() => navigate(card.route)}
             style={{ cursor: "pointer" }}
           >

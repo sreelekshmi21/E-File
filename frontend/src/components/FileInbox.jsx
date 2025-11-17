@@ -607,7 +607,7 @@ const handleBulkDelete = async () => {
 </div>
     <div className="card-body">
       <table className="table table-striped table-hover table-bordered align-middle">
-        <thead className="table-dark">
+        <thead className="table-light">
           <tr>
             <th></th>
             <th scope="col">#</th>

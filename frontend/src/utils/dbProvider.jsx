@@ -16,3 +16,33 @@ export const getAttachments = async (fileId) =>{
   if (!stored) return false;
   return stored?.permissions.includes(perm);
 };
+
+import { useEffect, useRef } from "react";
+
+export default function useIdleTimer(onIdle, timeout = 20 * 60 * 1000) {
+  const timerRef = useRef();
+
+  const resetTimer = () => {
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(onIdle, timeout);
+  };
+
+  useEffect(() => {
+    const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+
+    events.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    resetTimer(); // start timer on mount
+
+    return () => {
+      events.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+      clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return null;
+}
