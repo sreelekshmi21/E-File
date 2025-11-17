@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { getAttachments, hasPermission } from '../utils/dbProvider';
 import Select from 'react-select';
@@ -48,6 +48,22 @@ export default function FileInbox() {
       const suppressNextAlertRef = useRef(false);
 
       const navigate = useNavigate()
+
+      const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const selDept = params.get("department");  // Example: "FIN"
+
+    useEffect(() => {
+      const fetchInboxFiles = async () =>{
+         if (selDept) {
+      // const res = await fetch(`${BASE_URL}/api/inbox?department=${selDept}`)
+      //   const dt = await res.json()
+      //   setFiles(dt)
+        loadFiles(selDept)
+        }
+      }
+    fetchInboxFiles()
+  }, [selDept]);
 
      const handleApprovalStatusChange = (e) => {
     setApprovalStatus(e.target.value);

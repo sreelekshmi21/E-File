@@ -41,12 +41,13 @@ export default function AdminPanel() {
       route: "/redlist",
       bg: "bg-danger" 
     },
-    // {
-    //   title: "Reset Timer",
-    //   desc: "Reset file expiry timers",
-    //   icon: "bi-clock-history",
-    //   route: "/reset-timer"
-    // },
+    {
+      title: "File Count",
+      desc: "Count of created, received and expired files by Department",
+      icon: "bi-clock-history",
+      route: "/filecount",
+       bg: "bg-warning"
+    },
     // {
     //   title: "Reports",
     //   desc: "Download and view file reports",

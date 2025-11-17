@@ -253,7 +253,7 @@ const [selectedUnit, setSelectedUnit] = useState('');
   formDatas.append("file_id", file_id);
   // formDatas.append("file_name", file_name);
   formDatas.append("file_subject", file_subject);
-  // formDatas.append("sender", sender);
+  formDatas.append("sender", selectedDepartment?.value);
   formDatas.append("receiver", selectedReceiver?.value);
   // formDatas.append("date_added", date_added);
   // formDatas.append("inwardnum", inwardnum);

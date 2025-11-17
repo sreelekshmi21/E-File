@@ -589,8 +589,8 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
     INSERT INTO files (
       file_id, file_subject, receiver, date_added,
       current_status, remarks, status,department,division,unit,file_no, receivedAt,
-    expiry)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)
+    expiry, sender)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?)
   `;
 
   const fileValues = [
@@ -608,7 +608,7 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
     status,
     department,
     division,
-    unit,file_no,new Date().toISOString(),0
+    unit,file_no,new Date().toISOString(),0, sender
     
   ];
 
@@ -1985,6 +1985,69 @@ app.get("/api/high-priority/status", async (req, res) => {
   );
 
   res.json(rows[0] || { status: null });
+});
+
+app.get("/api/admin/dept-stats", async (req, res) => {
+  try {
+    const query = `
+      SELECT
+          department,
+          SUM(createdCount) AS createdCount,
+          SUM(receivedCount) AS receivedCount,
+          SUM(expiredCount) AS expiredCount
+      FROM (
+          SELECT 
+              sender AS department,
+              1 AS createdCount,
+              0 AS receivedCount,
+              0 AS expiredCount
+          FROM files
+      
+          UNION ALL
+      
+          SELECT 
+              receiver AS department,
+              0 AS createdCount,
+              1 AS receivedCount,
+              IF(expiry = 1, 1, 0) AS expiredCount
+          FROM files
+      ) AS combined
+      GROUP BY department
+      ORDER BY department;
+    `;
+
+    const [rows] = await dbPromise.query(query);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+
+app.get("/api/inbox", async (req, res) => {
+  try {
+    const department = req.query.department;
+
+    if (!department) {
+      return res.status(400).json({ error: "Department is required" });
+    }
+
+    const query = `
+      SELECT *
+      FROM files
+      WHERE receiver = ?
+      ORDER BY id DESC;
+    `;
+
+    const [rows] = await dbPromise.query(query, [department]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Error in /api/inbox:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 

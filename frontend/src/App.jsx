@@ -17,6 +17,7 @@ import Roles from './components/Roles'
 import RedList from './components/RedList'
 import HighPriorityList from './components/HighPriorityList'
 import useIdleTimer from './utils/dbProvider'
+import FileCount from './components/FileCount'
 
 function App() {
 
@@ -44,6 +45,7 @@ function App() {
     { path: "/roles", element: <Roles /> },
     { path: "/redlist", element: <RedList /> },
     { path: "/highpriority", element: <HighPriorityList /> },
+    { path: "/filecount", element: <FileCount /> },
   ]);
   return routes;
 };
