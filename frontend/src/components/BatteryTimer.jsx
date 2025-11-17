@@ -108,7 +108,7 @@ import { useAuth } from "../context/AuthContext";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-export default function BatteryTimer({ totalTimeMs = 2 * 60 * 1000, file }) {
+export default function BatteryTimer({ totalTimeMs = 3 * 24 * 60 * 60 * 1000, file }) {
   const [remaining, setRemaining] = useState(totalTimeMs);
   const BASE_URL = import.meta.env.VITE_API_URL;
   const [showTooltip, setShowTooltip] = useState(false);
