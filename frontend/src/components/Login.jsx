@@ -1,8 +1,14 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
+
+     const { login } = useAuth();
+
+     const BASE_URL = import.meta.env.VITE_API_URL 
+
      const [loginData, setLoginData] = useState({
         username: "",
         password: "",
@@ -29,7 +35,7 @@ export default function Login() {
         // console.log("Email:", email, "Password:", password);
         // Add authentication logic here
         try {
-    const response = await fetch("http://localhost:5000/login", {
+    const response = await fetch(`${BASE_URL}/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -42,8 +48,10 @@ export default function Login() {
     if (response.ok) {
       // alert("Login Successful!");
       console.log("User data:", data.user);
+      // localStorage.setItem("user", JSON.stringify(data.user));
       //  setToast({ show: true, title: "Login Success", body: `Welcome ${loginData.username}` });
       // navigate("/dashboard");
+      login(data);
       showToast("Login Success", `Welcome ${loginData.username}`, "success");
        setTimeout(() =>  {
         navigate("/dashboard")
@@ -52,7 +60,8 @@ export default function Login() {
       // ✅ Reset form after login
       setLoginData({ username: "", password: "" });
     } else {
-      alert("Login failed: " + data.error);
+      // alert("Login failed: " + data.error);
+      showToast("Login Failed", data.error || "Invalid credentials", "danger")
     }
   } catch (error) {
     console.error("Error logging in:", error);
@@ -101,14 +110,14 @@ export default function Login() {
             Login
           </button>
         </form>
-        <div className="text-center mt-3">
+        {/* <div className="text-center mt-3">
           <small>
             Don’t have an account?{" "}
             <nav><ul><li>
                   <Link to='/signup'>Sign Up</Link> 
                       </li></ul></nav>
           </small>
-        </div>
+        </div> */}
       </div>
       
       {/* <Toast

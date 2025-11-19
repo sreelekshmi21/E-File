@@ -7,8 +7,11 @@ const Signup = () => {
     username: "",
     password: '',
     email: "",
-    department: ""
+    department: "",
+    role_id: "2", // default: staff
   });
+
+  const BASE_URL = import.meta.env.VITE_API_URL
 
   // const [toast, setToast] = useState({ show: false, title: "", body: "" });
   const { showToast } = useToast();
@@ -20,10 +23,26 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Form Data Submitted:", formData);
+    if (formData.password.length < 8) {
+    showToast("Validation Error", "Password must be at least 8 characters long.", "danger");
+    return; // Stop the form submission here
+  }
+  const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;
+  if (!specialCharPattern.test(formData.password)) {
+    showToast("Validation Error", "Password must contain at least one special character.", "danger");
+    return;
+  }
+
+  // ✅ Email validation
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(formData?.email)) {
+    showToast("Error","Please enter a valid email address.", "danger");
+    return;
+  }
     // alert("Signup Successful!");
     // Here you can call your API to save the data
     try {
-    const response = await fetch("http://localhost:5000/signup", {
+    const response = await fetch(`${BASE_URL}/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -121,16 +140,36 @@ const Signup = () => {
               required
             />
           </div>
-
+          <div className="mb-3">
+            <label className="form-label">Select Role</label>
+              <select name="role_id"
+                     value={formData.role_id}
+                     onChange={handleChange}
+                      required>
+                  <option value="1">Admin</option>
+                  <option value="2">Staff</option>
+                  <option value="3">Viewer</option>
+              </select>
+          </div>
           <button type="submit" className="btn btn-primary w-100">
            Signup
           </button>
-        </form>
+        </form> 
         <div className="text-center mt-3">
           <nav>
             <ul>
                 <li>
                     <Link to='/'>Back To Login</Link> 
+                </li>
+            </ul>
+            
+          </nav>
+        </div>
+         <div className="text-center mt-3">
+          <nav>
+            <ul>
+                <li>
+                    <Link to='/adminpanel'>Back to Admin Panel</Link>
                 </li>
             </ul>
             

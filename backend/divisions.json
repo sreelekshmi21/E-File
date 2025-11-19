@@ -1,0 +1,35 @@
+[
+  
+
+  { "code": "", "name": "Administration - Office Of The President", "department_id": 1 },
+  { "code": "", "name": "Community Kitchen", "department_id": 10 },
+  { "code": "", "name": "Maintenance Division", "department_id": 10 },
+  { "code": "", "name": "House Keeping And Sanitation", "department_id": 10 },
+  { "code": "", "name": "Civil Projects Monitoring Division", "department_id": 10 },
+  { "code": "", "name": "Office Administration - Operations", "department_id": 10 },
+
+  { "code": "", "name": "Project Execution", "department_id": 10 },
+  { "code": "", "name": "Planning Division", "department_id": 48 },
+  { "code": "", "name": "Office Administration - Quality Assurance", "department_id": 54 },
+  { "code": "", "name": "Santhigiri Healthcare And Research Organization", "department_id": 54 },
+
+  
+  { "code": "", "name": "Office Administration - Safety", "department_id": 52 },
+  { "code": "", "name": "Santhigiri Medical Services Division", "department_id": 41 },
+  { "code": "", "name": "Medical Education Division", "department_id": 41 },
+  { "code": "", "name": "Office Administration - SHRO", "department_id": 41 },
+
+
+  { "code": "", "name": "Santhigiri Healthcare Products Division", "department_id": 41 },
+  { "code": "", "name": "Santhigiri Social Research Institute", "department_id": 51 },
+  { "code": "", "name": "Santhigiri Scientific and Industrial Research Institute", "department_id": 51 },
+  { "code": "", "name": "Healthcare Zone Security", "department_id": 53 },
+  { "code": "", "name": "Spiritual Zone Security", "department_id": 53 },
+  { "code": "", "name": "Office Administration - Security", "department_id": 53 }
+
+
+
+
+
+
+]

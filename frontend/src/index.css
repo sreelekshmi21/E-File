@@ -74,3 +74,91 @@ button:focus-visible {
   max-height: 600px;
   overflow-y: auto;
 }
+
+.sidebar {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+}
+.highlight-today{
+  background-color: rgb(215, 235, 81) !important
+}
+.text-red-600{
+  color:red;
+}
+.text-green-600{
+  color: green;
+}
+.battery-timer-container {
+  text-align: center;
+  font-family: Arial, sans-serif;
+  margin-top: 60px;
+
+  
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+
+}
+
+.battery {
+  position: relative;
+  width: 200px;
+  height: 15px;
+  border: 4px solid #333;
+  border-radius: 6px;
+  margin: 20px auto;
+  overflow: hidden;
+  background-color: #f0f0f0;
+}
+
+.battery-tip {
+  position: absolute;
+  right: -10px;
+  top: 12px;
+  width: 8px;
+  height: 25px;
+  background-color: #333;
+  border-radius: 2px;
+}
+
+.battery-level {
+  height: 100%;
+  transition: width 1s linear, background-color 0.5s ease;
+}
+
+.timer-text {
+  font-size: 18px;
+  color: #333;
+  margin-top: 8px;
+}
+.battery-tooltip {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.2s ease;
+}
+.note-block{
+  border: 1px solid #ddd;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+}
+.dashboard-card {
+  cursor: pointer;
+  border-radius: 15px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
