@@ -1,5 +1,7 @@
-@import "tailwindcss/preflight";  /* replaces @tailwind base */
+@import "tailwindcss/preflight";
+/* replaces @tailwind base */
 @import "tailwindcss/utilities";
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -20,37 +22,40 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
 
-body {
+/* body {
   margin: 0;
   display: flex;
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
-}
+} */
 
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
 }
 
- button {
+button {
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-   background-color: #1a1a1a; 
-   cursor: pointer;
+  background-color: #1a1a1a;
+  cursor: pointer;
   transition: border-color 0.25s;
-} 
+}
+
 button:hover {
   border-color: #646cff;
 }
+
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
@@ -61,9 +66,11 @@ button:focus-visible {
     color: #213547;
     background-color: #ffffff;
   }
+
   a:hover {
     color: #747bff;
   }
+
   button {
     background-color: #f9f9f9;
   }
@@ -80,21 +87,25 @@ button:focus-visible {
   background-color: #f8f9fa;
   border-right: 1px solid #dee2e6;
 }
-.highlight-today{
+
+.highlight-today {
   background-color: rgb(215, 235, 81) !important
 }
-.text-red-600{
-  color:red;
+
+.text-red-600 {
+  color: red;
 }
-.text-green-600{
+
+.text-green-600 {
   color: green;
 }
+
 .battery-timer-container {
   text-align: center;
   font-family: Arial, sans-serif;
   margin-top: 60px;
 
-  
+
   position: relative;
   display: inline-block;
   cursor: pointer;
@@ -132,6 +143,7 @@ button:focus-visible {
   color: #333;
   margin-top: 8px;
 }
+
 .battery-tooltip {
   position: absolute;
   top: -35px;
@@ -145,13 +157,15 @@ button:focus-visible {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   animation: fadeIn 0.2s ease;
 }
-.note-block{
+
+.note-block {
   border: 1px solid #ddd;
   padding: 12px;
   margin-bottom: 10px;
   border-radius: 6px;
   background-color: #f9f9f9;
 }
+
 .dashboard-card {
   cursor: pointer;
   border-radius: 15px;
@@ -161,4 +175,187 @@ button:focus-visible {
 .dashboard-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.attachments-container {
+
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  width: 100%;
+  padding: 20px 0;
+}
+
+.attachment-item {
+  /* width: 120px;
+  flex-shrink: 0;
+  cursor: pointer; */
+  width: 100%;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.attachment-icon {
+  font-size: 40px;
+  text-align: center;
+}
+
+.attachment-item p {
+  margin-top: 8px;
+  font-size: 14px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.upload-section {
+  margin-top: 20px;
+  padding: 20px 0;
+}
+
+.upload-box {
+  width: 200px;
+  height: 120px;
+  border: 2px dashed #777;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.attachments-box {
+  width: 100%;
+  border: 2px solid black;
+  padding: 15px;
+  height: 360px;
+  overflow-y: auto;
+
+  display: flex;
+  flex-direction: column;
+  /* 🔑 THIS makes it horizontal */
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.app-root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* TOP PART */
+/* .files-section {
+  flex: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding-bottom: 15px;
+} */
+
+/* DIVIDER */
+.folders-section {
+  flex: 1;
+  border-top: 1px solid #171515;
+  margin-top: 15px;
+  /* creates space */
+  padding-top: 15px;
+
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.folder-files {
+  display: flex;
+  flex-wrap: wrap;
+  /* allows next row */
+  gap: 16px;
+  margin-top: 10px;
+}
+
+/* File card */
+.file-card {
+  width: 180px;
+  height: 120px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  text-decoration: none;
+  color: #000;
+}
+
+.file-card:hover {
+  background-color: #f5f5f5;
+}
+
+/* .file-icon {
+  font-size: 28px;
+}
+
+.file-name {
+  margin-top: 8px;
+  font-size: 13px;
+  text-align: center;
+  word-break: break-word;
+} */
+
+
+.file-thumbnail {
+  border-radius: 4px;
+  margin-bottom: 8px;
+  border: 1px solid #eee;
+}
+
+.file-name {
+  font-size: 0.8rem;
+  text-align: center;
+  word-break: break-all;
+}
+
+h3,
+h4 {
+  text-align: center;
+}
+
+.department-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-btn-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+.update-send-container {
+  display: flex;
+  justify-content: center;
+  /* horizontal center */
+  margin-top: 20px;
+}
+
+.update-send-btn {
+  padding: 10px 24px;
+  font-size: 16px;
 }

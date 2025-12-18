@@ -84,6 +84,7 @@ app.use(express.json());
 
 // Serve static files from 'uploads' folder
 app.use('/uploads', express.static('uploads'));
+//app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 
 // MySQL Connection
@@ -114,16 +115,105 @@ db.connect((err) => {
 
 
 // Configure storage
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     cb(null, "uploads/"); // save files in uploads folder
+//   },
+//   filename: function (req, file, cb) {
+//     cb(null, Date.now() + path.extname(file.originalname)); // unique filename
+//   }
+// });
+
+// const upload = multer({ storage: storage });
+
+// STORAGE ENGINE: Create folder dynamically per file
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     const fileName = req.body.fileName;   // folder name
+//     const uploadPath = path.join("uploads", fileName);
+
+//     // create folder if not exists
+//     if (!fs.existsSync(uploadPath)) {
+//       fs.mkdirSync(uploadPath, { recursive: true });
+//     }
+
+//     cb(null, uploadPath);
+//   },
+
+//   filename: function (req, file, cb) {
+//     cb(null, file.originalname); // keep original name
+//   }
+// });
+
+// const upload = multer({ storage });
+
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/"); // save files in uploads folder
+    console.log("req.body in route:", req.body);
+    const folderName = req.body.fileName  // folder name from form
+    if (!folderName) {
+      console.log("❌ ERROR: file_id not received in Multer");
+    }
+    const safeFolderName = folderName.replace(/\//g, "-");
+    const folderPath = path.join(__dirname, "uploads", safeFolderName);
+
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
+
+    cb(null, folderPath);
   },
+
   filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname)); // unique filename
-  }
+    cb(null, Date.now() + "-" + file.originalname);
+  },
 });
 
 const upload = multer({ storage: storage });
+
+
+
+
+const storageStep2 = multer.diskStorage({
+  destination: function (req, file, cb) {
+    console.log("STEP 2 => req.body:", req.body);
+
+    const fileName = req.body.fileName;
+    const department = req.body.department;
+
+    if (!fileName || !department) {
+      return cb(new Error("fileName and department are required"), null);
+    }
+
+    const safeFileName = fileName.replace(/[\/\\]/g, "-");
+    // const safeDepartment = department.replace(/[\/\\]/g, "-");
+
+    // Folder: uploads/<fileName>/<department>
+    const folderPath = path.join(
+      __dirname,
+      "uploads",
+      safeFileName,
+      department
+    );
+
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
+
+    cb(null, folderPath);
+  },
+
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  }
+});
+
+const uploadStep2 = multer({ storage: storageStep2 });
+
+
+
+
 
 // Upload endpoint
 // app.post("/upload", upload.single("file"), (req, res) => {
@@ -135,92 +225,92 @@ const upload = multer({ storage: storage });
 //     file: req.file
 //   });
 // });
-app.post('/upload', upload.array('file', 10), async (req, res) => {
-  try {
+// app.post('/upload', upload.array('file', 10), async (req, res) => {
+//   try {
 
-    // const file_id = req.body.file_id;
+//     // const file_id = req.body.file_id;
 
-    // if (!file_id) {
-    //   return res.status(400).json({ error: 'file_id is required' });
-    // }
+//     // if (!file_id) {
+//     //   return res.status(400).json({ error: 'file_id is required' });
+//     // }
 
-    const files = req.files.map(file => ({
-      filename: file.originalname,
-      path: file.path,
-      size: file.size,
-      url: `http://localhost:5000/uploads/${file.filename}`
-    }));
+//     const files = req.files.map(file => ({
+//       filename: file.originalname,
+//       path: file.path,
+//       size: file.size,
+//       url: `http://localhost:5000/uploads/${file.filename}`
+//     }));
 
-     const insertQuery = 'INSERT INTO attachments (path) VALUES ?';
-     const values = files.map(file => [file.path]);
+//      const insertQuery = 'INSERT INTO attachments (path) VALUES ?';
+//      const values = files.map(file => [file.path]);
 
-      db.query(insertQuery, [values], (err, result) => {
-    if (err) {
-      console.error('DB insert error:', err);
-      return res.status(500).json({ error: 'Failed to insert file paths' });
-    }
+//       db.query(insertQuery, [values], (err, result) => {
+//     if (err) {
+//       console.error('DB insert error:', err);
+//       return res.status(500).json({ error: 'Failed to insert file paths' });
+//     }
 
-    res.status(200).json({
-      message: 'Files uploaded and paths saved to database',
-      fileCount: result.affectedRows,
-      paths: values.flat()
-    });
-  });
-
-
-//      const sql = `
-//      INSERT INTO files (
-//      file_id,
-//   file_name,
-//   file_subject,
-//   sender,
-//   receiver,
-//   date_added,
-//   inwardnum,
-//   outwardnum,
-//   current_status,
-//   remarks,
-//   department,
-//   path,
-//   size,
-//   url
-// ) VALUES ?
-//     `;
-//    // Format values for bulk insert
-//     // const values = files.map(f => [f.size, f.path, f.url]);
-//     const values = files.map(f => [
-//       f.file_id,
-//   f.file_name,
-//   f.file_subject,
-//   f.sender,
-//   f.receiver,
-//   f.date_added,     // 'YYYY-MM-DD' or new Date()
-//   f.inwardnum,
-//   f.outwardnum,
-//   f.current_status,
-//   f.remarks,
-//   f.department,
-//   f.path,
-//   f.size,
-//   f.url
-// ]);
-
-//     try {
-//   const [result] = await db.promise().query(sql, [values]);
-//   console.log('Insert successful:', result);
-// } catch (err) {
-//   console.error('Insert failed:', err);
-// }
+//     res.status(200).json({
+//       message: 'Files uploaded and paths saved to database',
+//       fileCount: result.affectedRows,
+//       paths: values.flat()
+//     });
+//   });
 
 
+// //      const sql = `
+// //      INSERT INTO files (
+// //      file_id,
+// //   file_name,
+// //   file_subject,
+// //   sender,
+// //   receiver,
+// //   date_added,
+// //   inwardnum,
+// //   outwardnum,
+// //   current_status,
+// //   remarks,
+// //   department,
+// //   path,
+// //   size,
+// //   url
+// // ) VALUES ?
+// //     `;
+// //    // Format values for bulk insert
+// //     // const values = files.map(f => [f.size, f.path, f.url]);
+// //     const values = files.map(f => [
+// //       f.file_id,
+// //   f.file_name,
+// //   f.file_subject,
+// //   f.sender,
+// //   f.receiver,
+// //   f.date_added,     // 'YYYY-MM-DD' or new Date()
+// //   f.inwardnum,
+// //   f.outwardnum,
+// //   f.current_status,
+// //   f.remarks,
+// //   f.department,
+// //   f.path,
+// //   f.size,
+// //   f.url
+// // ]);
 
-    // await File.insertMany(files);
-    // res.status(200).json({ message: 'Files uploaded successfully', files: files });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'Error uploading files', details: error.message});
-  }
-});
+// //     try {
+// //   const [result] = await db.promise().query(sql, [values]);
+// //   console.log('Insert successful:', result);
+// // } catch (err) {
+// //   console.error('Insert failed:', err);
+// // }
+
+
+
+//     // await File.insertMany(files);
+//     // res.status(200).json({ message: 'Files uploaded successfully', files: files });
+//   } catch (error) {
+//     console.error('Upload error:', error);
+//     res.status(500).json({ error: 'Error uploading files', details: error.message});
+//   }
+// });
 // Route to handle multiple file uploads
 // app.post('/upload', upload.array('file', 10), (req, res) => {
 //     res.status(200).json({ message: 'Files uploaded successfully!', file: req.file });
@@ -532,7 +622,7 @@ app.post("/login", async (req, res) => {
 //   const { file_name, file_subject,file_id,originator,file_recipient,date,inwardnum,outwardnum, current_status,remarks } = req.body;
 
 //   try {
-    
+
 //       const insertQuery =
 //         " INSERT INTO files (file_id, file_name, file_subject, sender, receiver, date_added, inwardnum,outwardnum,current_status, remarks,department)     VALUES (?,?,?,?,?,?,?,?,?,?,?)";
 //       db.query(
@@ -555,14 +645,228 @@ app.post("/login", async (req, res) => {
 
 
 
+// app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
+//   const {
+//     file_id,
+//     file_name,
+//     file_subject,
+//     sender,
+//     receiver,
+//     // date_added,
+//     inwardnum,
+//     outwardnum,
+//     current_status,
+//     remarks,
+//     status,
+//     department,
+//     division,
+//     unit,
+//     file_no
+//   } = req.body;
+
+//   const date_added = new Date();
+//   // const expiry_date = new Date(date_added.getTime() + 48 * 60 * 60 * 1000); // +48 hours
+//   const expiry_date = new Date(date_added.getTime() + 3 * 60 * 1000); // +48 hours
+
+//   const attachments = req.files;
+
+//   if (!file_id || !attachments) {
+//     return res.status(400).json({ error: "Missing required fields or attachments" });
+//   }
+
+//   // Insert into files table
+//   const insertFileQuery = `
+//     INSERT INTO files (
+//       file_id, file_subject, receiver, date_added,
+//       current_status, remarks, status,department,division,unit,file_no, receivedAt,
+//     expiry, sender)
+//     VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?)
+//   `;
+
+//   const fileValues = [
+//     file_id,
+//     // file_name,
+//     file_subject,
+//     // sender,
+//     receiver,
+//     // date_added,
+//     new Date(),
+//     // inwardnum,
+//     // outwardnum,
+//     current_status,
+//     remarks,
+//     status,
+//     department,
+//     division,
+//     unit,file_no,new Date().toISOString(),0, sender
+
+//   ];
+
+//   db.query(insertFileQuery, fileValues, (fileErr, fileResult) => {
+//     if (fileErr) {
+//       console.error("File insert error:", fileErr);
+//       return res.status(500).json({ error: "Failed to create file" });
+//     }
+
+//     // Insert each attachment with the same file_id
+//     if (attachments && attachments.length > 0) {
+//     const insertAttachmentsQuery = `
+//       INSERT INTO attachments (file_id, path, filename)
+//       VALUES ?
+//     `;
+
+//     const attachmentValues = attachments.map((file) => [
+//       // file_id,
+//       // file?.id,
+//       fileResult.insertId,
+//       // file.originalname,
+//       file.path,
+//       file.originalname
+//       // file.size,
+//     ]);
+
+//     db.query(insertAttachmentsQuery, [attachmentValues], (attErr, attResult) => {
+//       if (attErr) {
+//         console.error("Attachment insert error:", attErr);
+//         return res.status(500).json({ error: "File saved, but failed to save attachments" });
+//       }
+
+//       res.status(201).json({
+//         message: "File and attachments uploaded successfully",
+//         file_id,
+//         attachment_count: attachments.length,
+//         id: fileResult.insertId
+//       });
+//     });
+//   }else{
+//     return res.status(201).json({ 
+//       message: "File created without attachments.", 
+//       attachment_count: attachments.length,
+//       id: fileResult.insertId
+//     });
+//   }
+//   });
+// });
+///////////////////////////////////////////////////////////////
+// app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
+//   const {
+//     file_id,
+//     fileName,
+//     file_subject,
+//     sender,
+//     receiver,
+//     inwardnum,
+//     outwardnum,
+//     current_status,
+//     remarks,
+//     status,
+//     department,
+//     division,
+//     unit,
+//     file_no
+//   } = req.body;
+
+//   const date_added = new Date();
+//   const expiry_date = new Date(date_added.getTime() + 3 * 60 * 1000); // 3 minutes
+
+//   const attachments = req.files;
+
+//   console.log('=====================',file_id,fileName)
+
+//   if (!file_id || !fileName) {
+//     return res.status(400).json({ error: "Missing file_id or file_name" });
+//   }
+
+//   // ✅ Create folder name from file_name (remove extension)
+//   const folderName = fileName; // "10th_marksheet"
+//   const folderPath = path.join(__dirname, "uploads", folderName);
+
+//   // ✅ Create folder if it does not exist
+//   if (!fs.existsSync(folderPath)) {
+//     fs.mkdirSync(folderPath, { recursive: true });
+//   }
+
+//   // Insert into files table
+//   const insertFileQuery = `
+//     INSERT INTO files (
+//       file_id, file_subject, receiver, date_added,
+//       current_status, remarks, status, department, division, unit, file_no, receivedAt,
+//       expiry, sender
+//     )
+//     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+//   `;
+
+//   const fileValues = [
+//     file_id,
+//     file_subject,
+//     receiver,
+//     new Date(),
+//     current_status,
+//     remarks,
+//     status,
+//     department,
+//     division,
+//     unit,
+//     file_no,
+//     new Date().toISOString(),
+//     expiry_date,
+//     sender
+//   ];
+
+//   db.query(insertFileQuery, fileValues, (fileErr, fileResult) => {
+//     if (fileErr) {
+//       console.error("File insert error:", fileErr);
+//       return res.status(500).json({ error: "Failed to create file" });
+//     }
+
+//     // Process attachments
+//     if (attachments && attachments.length > 0) {
+//       const movedFiles = [];
+
+//       attachments.forEach((file) => {
+//         const newPath = path.join(folderPath, file.originalname);
+//         fs.renameSync(file.path, newPath);
+
+//         movedFiles.push([fileResult.insertId, `uploads/${folderName}/${file.originalname}`, file.originalname]);
+//       });   
+
+//       // Insert into attachments table
+//       const insertAttachmentsQuery = `
+//         INSERT INTO attachments (file_id, path, filename)
+//         VALUES ?
+//       `;
+
+//       db.query(insertAttachmentsQuery, [movedFiles], (attErr) => {
+//         if (attErr) {
+//           console.error("Attachment insert error:", attErr);
+//           return res.status(500).json({ error: "File saved, but failed to save attachments" });
+//         }
+
+//         res.status(201).json({
+//           message: "File and attachments uploaded successfully",
+//           file_id,
+//           attachment_count: attachments.length,
+//           id: fileResult.insertId
+//         });
+//       });
+
+//     } else {
+//       return res.status(201).json({
+//         message: "File created without attachments.",
+//         attachment_count: 0,
+//         id: fileResult.insertId
+//       });
+//     }
+//   });
+// });
+/////////////////////////////////////////////////////
 app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
   const {
     file_id,
-    file_name,
+    fileName,     // <-- contains OGS/SM/OGS/44/2025
     file_subject,
     sender,
     receiver,
-    // date_added,
     inwardnum,
     outwardnum,
     current_status,
@@ -575,41 +879,53 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
   } = req.body;
 
   const date_added = new Date();
-  // const expiry_date = new Date(date_added.getTime() + 48 * 60 * 60 * 1000); // +48 hours
-  const expiry_date = new Date(date_added.getTime() + 3 * 60 * 1000); // +48 hours
+  const expiry_date = new Date(date_added.getTime() + 3 * 60 * 1000); // 3 min
 
   const attachments = req.files;
 
-  if (!file_id || !attachments) {
-    return res.status(400).json({ error: "Missing required fields or attachments" });
+  console.log("==== Incoming ====", file_id, fileName);
+
+  if (!file_id || !fileName) {
+    return res.status(400).json({ error: "Missing file_id or fileName" });
   }
 
-  // Insert into files table
+  // ⭐ Convert "OGS/SM/OGS/44/2025" → "OGS-SM-OGS-44-2025"
+  const safeFolderName = fileName.replace(/\//g, "-");
+
+  const folderPath = path.join(__dirname, "uploads", safeFolderName);
+
+  // Create folder if needed
+  if (!fs.existsSync(folderPath)) {
+    fs.mkdirSync(folderPath, { recursive: true });
+  }
+
+  // ==========================
+  // INSERT FILE IN DATABASE
+  // ==========================
   const insertFileQuery = `
     INSERT INTO files (
       file_id, file_subject, receiver, date_added,
-      current_status, remarks, status,department,division,unit,file_no, receivedAt,
-    expiry, sender)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?)
+      current_status, remarks, status, department,
+      division, unit, file_no, receivedAt, expiry, sender
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const fileValues = [
     file_id,
-    // file_name,
     file_subject,
-    // sender,
     receiver,
-    // date_added,
     new Date(),
-    // inwardnum,
-    // outwardnum,
     current_status,
     remarks,
     status,
     department,
     division,
-    unit,file_no,new Date().toISOString(),0, sender
-    
+    unit,
+    file_no,
+    new Date().toISOString(),
+    expiry_date,
+    sender
   ];
 
   db.query(insertFileQuery, fileValues, (fileErr, fileResult) => {
@@ -618,45 +934,58 @@ app.post("/createfilewithattachments", upload.array("file", 10), (req, res) => {
       return res.status(500).json({ error: "Failed to create file" });
     }
 
-    // Insert each attachment with the same file_id
+    // ==========================
+    // PROCESS ATTACHMENTS
+    // ==========================
     if (attachments && attachments.length > 0) {
-    const insertAttachmentsQuery = `
-      INSERT INTO attachments (file_id, path, filename)
-      VALUES ?
-    `;
+      const movedFiles = [];
 
-    const attachmentValues = attachments.map((file) => [
-      // file_id,
-      // file?.id,
-      fileResult.insertId,
-      // file.originalname,
-      file.path,
-      file.originalname
-      // file.size,
-    ]);
+      attachments.forEach((file) => {
+        const newPath = path.join(folderPath, file.originalname);
+        fs.renameSync(file.path, newPath);
 
-    db.query(insertAttachmentsQuery, [attachmentValues], (attErr, attResult) => {
-      if (attErr) {
-        console.error("Attachment insert error:", attErr);
-        return res.status(500).json({ error: "File saved, but failed to save attachments" });
-      }
+        movedFiles.push([
+          fileResult.insertId,
+          `uploads/${safeFolderName}/${file.originalname}`,
+          file.originalname
+        ]);
+      });
 
-      res.status(201).json({
-        message: "File and attachments uploaded successfully",
-        file_id,
-        attachment_count: attachments.length,
+      // Insert attachments
+      const insertAttachmentsQuery = `
+        INSERT INTO attachments (file_id, path, filename)
+        VALUES ?
+      `;
+
+      db.query(insertAttachmentsQuery, [movedFiles], (attErr) => {
+        if (attErr) {
+          console.error("Attachment insert error:", attErr);
+          return res.status(500).json({
+            error: "File created but failed to save attachments"
+          });
+        }
+
+        res.status(201).json({
+          message: "File and attachments uploaded successfully",
+          file_id,
+          id: fileResult.insertId,
+          attachment_count: attachments.length,
+          folder_used: safeFolderName
+        });
+      });
+
+    } else {
+      return res.status(201).json({
+        message: "File created without attachments.",
+        attachment_count: 0,
         id: fileResult.insertId
       });
-    });
-  }else{
-    return res.status(201).json({ 
-      message: "File created without attachments.", 
-      attachment_count: attachments.length,
-      id: fileResult.insertId
-    });
-  }
+    }
   });
 });
+
+
+
 
 
 app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) => {
@@ -692,7 +1021,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
     UPDATE files
     SET 
        
-      file_subject = ?,
+     
       receiver = ?, 
       date_added = ?, 
       current_status = ?, 
@@ -706,7 +1035,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
 
   const updateFileValues = [
     // file_name,
-    file_subject,
+    // file_subject,
     receiver,
     // updatedDate,
     // date_added,
@@ -746,29 +1075,29 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
     //   }
 
     //   // ✅ Insert new attachments
-      const insertAttachmentsQuery = `
+    const insertAttachmentsQuery = `
         INSERT INTO attachments (file_id, path, filename)
         VALUES ?
       `;
 
-      const attachmentValues = attachments.map((file) => [
-        fileId,
-        file.path,
-        file.originalname
-      ]);
+    const attachmentValues = attachments.map((file) => [
+      fileId,
+      file.path,
+      file.originalname
+    ]);
 
-      db.query(insertAttachmentsQuery, [attachmentValues], (attErr, attResult) => {
-        if (attErr) {
-          console.error("Attachment insert error:", attErr);
-          return res.status(500).json({ error: "File updated, but failed to save new attachments" });
-        }
+    db.query(insertAttachmentsQuery, [attachmentValues], (attErr, attResult) => {
+      if (attErr) {
+        console.error("Attachment insert error:", attErr);
+        return res.status(500).json({ error: "File updated, but failed to save new attachments" });
+      }
 
-        return res.status(200).json({
-          message: "File and attachments updated successfully",
-          file_id: fileId,
-          attachment_count: attachments.length
-        });
+      return res.status(200).json({
+        message: "File and attachments updated successfully",
+        file_id: fileId,
+        attachment_count: attachments.length
       });
+    });
     // });
   });
 });
@@ -778,7 +1107,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
 //new
 // app.get("/api/files", (req, res) => {
 //   console.log("API /api/files called with query:", req.query);
-  
+
 //   const statusParam = req.query.status;
 //   const departmentId = req.query.department;
 //   const division = req.query.division;
@@ -798,9 +1127,9 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
 
 //     const placeholders = filteredStatuses.map(() => '?').join(', ');
 //     let query = `SELECT * FROM files WHERE LOWER(status) IN (${placeholders})`;
-    
+
 //     const values = [...filteredStatuses];
-   
+
 //     // if (!isGSO) {
 //     //   query += ` AND department = ?`;
 //     //   values.push(departmentId);
@@ -808,7 +1137,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
 //     if (departmentId && departmentId.toUpperCase() !== 'OGS') {
 //       query += ` AND department = ?`;
 //       values.push(departmentId);
-      
+
 //    }
 
 //     if (division) {
@@ -823,7 +1152,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
 
 //     query += ` AND status IS NOT NULL ORDER BY date_added DESC`;
 
-    
+
 
 //     console.log('Filtered Query:', query);
 //     console.log('Query Values:', values);
@@ -846,7 +1175,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
 //     if (!isGSO) {
 //       conditions.push(`department = ?`);
 //       values.push(departmentId);
-     
+
 //     }
 
 //     if (division) {
@@ -1180,8 +1509,8 @@ app.get('/api/documents/:documentId/comments', (req, res) => {
 
   // const query = `SELECT * FROM comments WHERE file_id = ? ORDER BY created_at ASC`;
   const query = `SELECT c.*, u.username AS username FROM comments c JOIN signup u ON c.user_id = u.id WHERE c.file_id = ? ORDER BY c.created_at DESC;`;
-  
- 
+
+
   db.query(query, [documentId], (err, comments) => {
     if (err) {
       console.error('DB Error:', err);
@@ -1189,7 +1518,7 @@ app.get('/api/documents/:documentId/comments', (req, res) => {
     }
 
     // res.status(200).json(rows);
-     if (comments.length === 0) return res.status(200).json([]);
+    if (comments.length === 0) return res.status(200).json([]);
 
     const commentIds = comments.map(c => c.id);
 
@@ -1313,15 +1642,15 @@ app.get('/api/departments', async (req, res) => {
 
 
 app.get('/api/departments/:departmentId/divisions', async (req, res) => {
-  const { departmentId } = req.params; 
-  console.log('departId===',departmentId)
+  const { departmentId } = req.params;
+  console.log('departId===', departmentId)
 
   try {
     const [rows] = await dbPromise.query(
-      'SELECT id, name, code FROM divisions WHERE department_id = ?', 
+      'SELECT id, name, code FROM divisions WHERE department_id = ?',
       [departmentId]
     );
-    
+
     res.status(200).json(rows);
   } catch (error) {
     console.error('Error fetching divisions:', error);
@@ -1386,7 +1715,7 @@ app.get('/api/divisions/:divisionId/units', async (req, res) => {
 //   ],
 //   BRD: [
 //     { name: 'Santhigiri Ayurveda Siddha Vaidyasala', code: 'SASV' },
-   
+
 //   ],
 //   DEV: [
 //     { name: 'Production', code: 'PRD' },
@@ -1435,7 +1764,7 @@ app.post('/api/file-events', async (req, res) => {
 
 app.get("/api/file-events/:fileId", (req, res) => {
   const fileId = req.params.fileId;
-  console.log('fileId===',fileId)
+  console.log('fileId===', fileId)
 
   if (!fileId) {
     return res.status(400).json({ error: "Missing fileId" });
@@ -1461,7 +1790,7 @@ app.get("/api/file-events/:fileId", (req, res) => {
       console.error("Database error:", err);
       return res.status(500).json({ error: "Database error" });
     }
-    
+
     res.json(results);
   });
 });
@@ -1560,7 +1889,7 @@ async function getCurrentFileNumber() {
     const currentCount = rows[0].count;
     const nextNumber = currentCount + 1;
     const formattedNumber = String(nextNumber).padStart(2, '0');
-    
+
     return formattedNumber;
   } catch (err) {
     throw err;
@@ -1619,7 +1948,7 @@ app.get("/api/debug-counter", async (req, res) => {
       SELECT count FROM file_counter WHERE department = 'GLOBAL'
     `);
     connection.release();
-    
+
     const currentCount = rows.length > 0 ? rows[0].count : 'No record found';
     console.log('Current counter value:', currentCount);
     res.json({ currentCount, nextNumber: currentCount + 1 });
@@ -1708,7 +2037,7 @@ app.put("/api/files/:id/expire", async (req, res) => {
   try {
     await dbPromise.query(
       // `UPDATE files SET status = 'expired' WHERE id = ?`,
-     `UPDATE files SET expiry = 1, status = 'expired' WHERE id = ?`,
+      `UPDATE files SET expiry = 1, status = 'expired' WHERE id = ?`,
       [id]
     );
     res.json({ message: "File marked as expired" });
@@ -1730,14 +2059,14 @@ app.get("/api/files/redlist", async (req, res) => {
 
 
 app.post('/api/notes', async (req, res) => {
-  const { note, userId, fileId} = req.body;
+  const { note, userId, fileId } = req.body;
   if (!fileId || !userId || !note) {
     return res.status(400).json({ error: 'File number, user, and note are required' });
   }
   const createdAt = new Date(); // current date & time
   await dbPromise.query(
     'INSERT INTO notes (note, created_by,file_id, created_at) VALUES (?, ?, ?, ?)',
-    [note, userId,fileId,createdAt]
+    [note, userId, fileId, createdAt]
   );
   res.status(201).send({ message: 'Note created' });
 });
@@ -1746,7 +2075,7 @@ app.post('/api/notes', async (req, res) => {
 
 app.get('/api/documents/:id/notes', async (req, res) => {
   const { id } = req.params;
-  
+
 
   const [notes] = await dbPromise.query(`
     SELECT n.note, n.created_at, u.username
@@ -2049,6 +2378,252 @@ app.get("/api/inbox", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+
+// app.post("/upload", upload.array("files"), (req, res) => {
+//   const folderName = req.body.fileName;
+
+//   const uploadedFiles = req.files.map((file) => ({
+//     // fileName: file.originalname,
+//     folder: folderName,
+//     filename: file.originalname,   
+//     path: `${file.destination}/${file.originalname}`,
+//   }));
+
+//   res.json({ uploadedFiles });
+// });
+/////////////////////////////////////////////////////////////////
+// app.post("/upload", upload.array("files"), (req, res) => {
+//   let fileName = req.body.fileName;      // e.g., "10th_marksheet.pdf"
+//   // const folderName = fileName.split(".")[0];  // → "10th_marksheet"
+
+//   const folderPath = path.join(__dirname, "uploads", fileName);
+
+//   // Create folder if not exist
+//   if (!fs.existsSync(folderPath)) {
+//     fs.mkdirSync(folderPath, { recursive: true });
+//   }
+
+//   // Move uploaded files into this folder
+//   const uploadedFiles = req.files.map((file) => {
+//     const newPath = path.join(folderPath, file.originalname);
+//     fs.renameSync(file.path, newPath);
+
+//     return {
+//       filename: file.originalname,
+//       path: `uploads/${fileName}/${file.originalname}`, // to display in frontend    
+//     };
+//   });
+
+//   res.json({ uploadedFiles });
+// });
+
+app.post("/upload", upload.array("files"), async (req, res) => {
+  try {
+    const fileName = req.body.fileName;     // folder name
+    const recordId = req.body.recordId;     // <- foreign key to save in DB (VERY IMPORTANT)
+    // const safeFolderName = fileName.replace(/\//g, "_");
+
+    const folderPath = path.join(__dirname, "uploads", fileName);
+
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
+
+    const uploadedFiles = [];
+
+    for (const file of req.files) {
+      const newPath = path.join(folderPath, file.originalname);
+      fs.renameSync(file.path, newPath);
+
+      const filePath = `uploads/${fileName}/${file.originalname}`;
+
+      uploadedFiles.push({
+        filename: file.originalname,
+        path: filePath,
+      });
+
+      // ⭐ INSERT INTO DATABASE
+      await dbPromise.query(
+        "INSERT INTO attachments (file_id, filename, path) VALUES (?, ?, ?)",
+        [recordId, file.originalname, filePath]
+      );
+    }
+
+    res.json({
+      message: "Files uploaded & inserted into database",
+      uploadedFiles,
+    });
+  } catch (err) {
+    console.error("Upload error:", err);
+    res.status(500).json({ message: "Upload failed", error: err.message });
+  }
+});
+
+
+
+
+
+app.post("/uploadStep2", uploadStep2.array("files", 10), (req, res) => {
+  const formattedFiles = req.files.map((file) => ({
+    filename: file.originalname,
+    // path: baseUrl + file.path.replace(/\\/g, "/"), // Fix Windows slashes
+  }));
+  res.json({
+    message: "Step 2 upload successful - department folder created",
+    files: formattedFiles
+  });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// app.post("/upload", upload.array("files"), (req, res) => {
+//   let folderName = req.body.fileName;
+//   folderName = folderName.split(".")[0]; // remove extension
+
+//   const folderPath = path.join(__dirname, "uploads", folderName);
+
+//   if (!fs.existsSync(folderPath)) {
+//     fs.mkdirSync(folderPath, { recursive: true });
+//   }
+
+//   const uploadedFiles = req.files.map(file => {
+//     const newPath = path.join(folderPath, file.originalname);
+//     fs.renameSync(file.path, newPath);
+//     return {
+//       filename: file.originalname,
+//       path: `${folderName}/${file.originalname}`,
+//     };
+//   });
+
+//   res.json({ uploadedFiles });
+// });
+
+
+// app.get("/attachments/:fileName", (req, res) => {
+//    const folderName = decodeURIComponent(req.params.fileName);
+//   const folderPath = path.join(__dirname, "uploads", folderName);
+
+//   if (!fs.existsSync(folderPath)) {
+//     return res.json([]); // folder does not exist yet
+//   }
+
+//   const files = fs.readdirSync(folderPath).map((filename) => ({
+//     filename,
+//     path: `uploads/${folderName}/${filename}`,
+//   }));
+
+//   res.json(files);
+// });
+//////////////////////////////////////////////////////
+
+// app.get("/attachments/:fileName", (req, res) => {
+//   // const { fileName } = req.params;
+//   const fileName = decodeURIComponent(req.params.fileName);
+//   console.log('fileName=========================', fileName)
+//   const safeFolderName = fileName.replace(/\//g, "-");
+//   console.log('safeFolderNamee=========================', safeFolderName)
+//   // const uploadsRoot = path.join(__dirname, "..", "uploads", safeFolderName);
+//   const uploadsRoot = path.join(
+//     process.cwd(),
+//     "..",
+//     "uploads",
+//     safeFolderName
+//   );
+//   console.log("Resolved uploadsRoot:", uploadsRoot);
+//   console.log("Exists:", fs.existsSync(uploadsRoot));
+
+//   console.log("CWD:", process.cwd());
+//   console.log("Uploads dir exists:",
+//     fs.existsSync(path.join(process.cwd(), "uploads"))
+//   );
+
+//   // If file folder does not exist
+//   if (!fs.existsSync(uploadsRoot)) {
+//     return res.json({});
+//   }
+
+//   const result = {};
+
+//   try {
+//     // Read department folders
+//     const departments = fs.readdirSync(uploadsRoot, {
+//       withFileTypes: true
+//     });
+
+//     departments.forEach(deptDir => {
+//       if (deptDir.isDirectory()) {
+//         const deptName = deptDir.name;
+//         const deptPath = path.join(uploadsRoot, deptName);
+
+//         const files = fs.readdirSync(deptPath);
+
+//         result[deptName] = files.map(file => ({
+//           file_name: file,
+//           file_path: `/uploads/${safeFolderName}/${deptName}/${file}`
+//         }));
+//       }
+//     });
+
+//     res.json(result);
+
+//   } catch (err) {
+//     console.error("Error reading attachments:", err);
+//     res.status(500).json({ message: "Failed to read attachments" });
+//   }
+// });
+app.get("/attachments/:fileName", (req, res) => {
+  const fileName = decodeURIComponent(req.params.fileName);
+  const safeFolderName = fileName.replace(/[\/\\]/g, "-");
+
+  const uploadsRoot = path.join(
+    process.cwd(),
+    "uploads",
+    safeFolderName
+  );
+
+  console.log("uploadsRoot:", uploadsRoot);
+  console.log("Exists:", fs.existsSync(uploadsRoot));
+
+  console.log("Raw contents:", fs.readdirSync(uploadsRoot, { withFileTypes: true }));
+
+  if (!fs.existsSync(uploadsRoot)) {
+    return res.json({});
+  }
+
+  const result = {};
+  const departments = fs.readdirSync(uploadsRoot, { withFileTypes: true });
+
+  departments.forEach(dept => {
+    if (!dept.isDirectory()) return;
+
+    const deptPath = path.join(uploadsRoot, dept.name);
+    const files = fs.readdirSync(deptPath);
+
+    result[dept.name] = files.map(file => ({
+      file_name: file,
+      file_path: `/uploads/${safeFolderName}/${dept.name}/${file}`
+    }));
+  });
+
+  res.json(result);
+});
+
+
+
 
 
 
