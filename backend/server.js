@@ -994,7 +994,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
   const {
     file_name,
     file_subject,
-    // sender,
+    sender,
     receiver,
     // date_added,
     // inwardnum,
@@ -1029,7 +1029,8 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
       department = ?,
       division = ?,
       unit = ?,
-      status = ?
+      status = ?,
+      sender = ?
     WHERE id = ?
   `;
 
@@ -1048,6 +1049,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
     division,
     unit,
     status,
+    sender,
     fileId
   ];
 
@@ -1251,6 +1253,9 @@ app.get("/api/files", (req, res) => {
       } else if (mode === "received") {
         query += ` AND receiver = ?`;
         values.push(departmentId);
+      } else if (mode === "forwarded") {
+        query += ` AND sender = ?`;
+        values.push(departmentId);
       } else {
         query += ` AND (department = ? OR receiver = ?)`;
         values.push(departmentId, departmentId);
@@ -1282,6 +1287,9 @@ app.get("/api/files", (req, res) => {
       values.push(departmentId);
     } else if (mode === "received") {
       conditions.push(`receiver = ?`);
+      values.push(departmentId);
+    } else if (mode === "forwarded") {
+      conditions.push(`sender = ?`);
       values.push(departmentId);
     } else {
       conditions.push(`(department = ? OR receiver = ?)`);
@@ -2078,7 +2086,7 @@ app.get('/api/documents/:id/notes', async (req, res) => {
 
 
   const [notes] = await dbPromise.query(`
-    SELECT n.note, n.created_at, u.username
+    SELECT n.note, n.created_at, n.created_by, n.id, u.username,u.department
 FROM notes n
 JOIN signup u ON n.created_by = u.id
 WHERE n.file_id = ?
@@ -2623,6 +2631,29 @@ app.get("/attachments/:fileName", (req, res) => {
 });
 
 
+
+app.put("/api/files/:id/status", async (req, res) => {
+  console.log('id=================================================')
+  const { id } = req.params;
+  const { status } = req.body;
+  // const userId = req.user.id;
+  console.log('id==============', id, status)
+
+  const allowedStatuses = ["PENDING", "APPROVED", "REJECTED"];
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).json({ message: "Invalid status" });
+  }
+
+  await dbPromise.query(
+    `UPDATE files SET status = ? WHERE id = ?`,
+    [status, id]
+  );
+
+  res.status(200).json({
+    message: "File status updated successfully",
+    status
+  });
+});
 
 
 

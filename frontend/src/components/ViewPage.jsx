@@ -13,6 +13,8 @@ export default function ViewPage() {
 
   const [selectedFiles, setSelectedFiles] = useState([]);
 
+  const [approvalStatus, setApprovalStatus] = useState('pending');
+
   const [departments, setDepartments] = useState([])
 
   const [selectedReceiver, setSelectedReceiver] = useState(null);
@@ -300,10 +302,63 @@ export default function ViewPage() {
   }, [fileToEdit?.file_id])
 
 
+  const renderThumbnail = (url, path) => {
+    const ext = path.split(".").pop().toLowerCase();
+
+    if (["jpg", "jpeg", "png", "gif"].includes(ext)) {
+      return <img src={url} alt="preview" />;
+    }
+
+    if (ext === "pdf") {
+      return (
+        <iframe
+          src={`${url}#page=1`}
+          title="PDF Preview"
+        />
+      );
+    }
+
+    // return <span className="no-preview">No Preview</span>;
+    return (
+      <div className="no-preview">
+        <span>📄</span>
+        <small>No preview</small>
+      </div>
+    );
+  };
+
+  const updateFileStatus = async (fileId, status) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/files/${fileId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          // include auth header if you use JWT
+          // "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update status");
+      }
+
+      const data = await response.json();
+      console.log("Status updated:", data);
+      alert(`File ${status.toLowerCase()} successfully`);
+    } catch (err) {
+      console.error("Error updating file status:", err);
+      alert(err.message);
+    }
+  };
+
+
 
   return (
     <>
       <div>File Matter: {fileToEdit?.remarks}</div>
+      <div>{fileToEdit?.file_subject}</div>
       <div className="attachments-box">
         <h4>{`${fileToEdit?.file_id} ${fileToEdit?.department} Initial Attachments`}</h4>
         <div className="attachments-container files-section">
@@ -311,22 +366,26 @@ export default function ViewPage() {
             <div
               key={doc.id}
               className="attachment-item"
-              // onClick={() => window.open(`${BASE_URL}/${doc.path}`, "_blank")}
               onClick={() => {
-                const fileUrl = doc.path;
-                console.log(fileUrl)
-                // if it's a blob url, open directly
-                if (fileUrl.startsWith("blob:")) {
-                  window.open(fileUrl, "_blank");
-                } else {
-                  // server file → add BASE_URL
-                  window.open(`${BASE_URL}/${fileUrl}`, "_blank");
-                }
+                const fileUrl = doc.path.startsWith("blob:")
+                  ? doc.path
+                  : `${BASE_URL}/${doc.path}`;
+                window.open(fileUrl, "_blank");
               }}
               title={doc.filename}
             >
-              <div className="attachment-icon">{getIcon(doc.path)}</div>
-              <p>{doc.filename}</p>
+              {/* 🔍 Preview */}
+              <div className="preview-box">
+                {renderThumbnail(
+                  doc.path.startsWith("blob:")
+                    ? doc.path
+                    : `${BASE_URL}/${doc.path}`,
+                  doc.path
+                )}
+              </div>
+
+              {/* 📄 File name */}
+              <p className="file-name">{doc.filename}</p>
             </div>
           ))}
         </div>
@@ -439,9 +498,10 @@ export default function ViewPage() {
         <h3>Notes</h3>
         {notes.map(note => (
           <div key={note?.id} className="note-block">
+            {console.log('note', note)}
             <p>{note?.note}</p>
             <small>
-              — <strong>{note?.username}</strong>, {user?.user?.department} {new Date(note?.created_at).toLocaleString()}
+              — <strong>{note?.username}</strong>, {note?.department} {new Date(note?.created_at).toLocaleString()}
             </small>
           </div>
         ))}
@@ -472,7 +532,7 @@ export default function ViewPage() {
 
         </div>
       </div>
-      <div className="update-send-container">
+      {fileToEdit.status !== "APPROVED" && <div className="update-send-container">
         <button className="update-send-btn btn btn-primary" onClick={(e) =>
           handleSave({
             e,
@@ -489,7 +549,22 @@ export default function ViewPage() {
         }>
           Update & Send
         </button>
-      </div>
+      </div>}
+      {user?.user?.role_id == 1 && <div className="d-flex justify-content-center gap-3 mt-3">
+        <button
+          className="btn btn-success d-flex align-items-center gap-2"
+          onClick={() => updateFileStatus(fileToEdit?.id, "APPROVED")}>
+          <i className="bi bi-check-circle"></i>
+          Approve
+        </button>
+
+        <button
+          className="btn btn-danger d-flex align-items-center gap-2"
+          onClick={() => updateFileStatus(fileToEdit?.id, "REJECTED")}>
+          <i className="bi bi-x-circle"></i>
+          Reject
+        </button>
+      </div>}
     </>
   );
 

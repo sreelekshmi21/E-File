@@ -70,7 +70,7 @@ export default function useFileSave({
         formDatas.append("file_no", file_no);
         formDatas.append("file_id", file_id);
         formDatas.append("file_subject", file_subject);
-        formDatas.append("sender", selectedDepartment?.value || fileToEdit?.sender);
+        formDatas.append("sender", user?.user?.department || selectedDepartment?.value || fileToEdit?.sender);
         formDatas.append("receiver", selectedReceiver?.value);
         formDatas.append("current_status", selectedDepartment?.value || fileToEdit?.current_status);
         formDatas.append("remarks", formData?.remarks || "");

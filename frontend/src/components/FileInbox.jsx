@@ -9,6 +9,7 @@ import DocumentExpiryCountdown from './DocumentExpiryCountdown';
 import BatteryTimer from './BatteryTimer';
 import ReusableModal from '../utils/ReusableModal';
 import { useToast } from '../context/ToastContext';
+import { useCurrentTime } from '../hooks/useCurrentTime';
 
 
 export default function FileInbox() {
@@ -19,6 +20,8 @@ export default function FileInbox() {
   const [search, setSearch] = useState("");
 
   const BASE_URL = import.meta.env.VITE_API_URL
+
+  const currentTime = useCurrentTime("en-US");
 
   const { showToast } = useToast();
 
@@ -475,16 +478,16 @@ export default function FileInbox() {
 
   return (
     <>
-      <div className="container mt-5">
+      <div className="container-fluid mt-5">
         <div className="row">
 
           <Sidebar />
 
-          <div className="col-md-9">
+          <div className="col-md-10">
             <div className="card shadow-lg">
               <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h4 className="mb-0">📑 File Register</h4>
-
+                <h4>Logged in as {user?.user?.username} | {currentTime}</h4>
                 <input
                   type="text"
                   className="form-control w-25"
@@ -531,15 +534,32 @@ export default function FileInbox() {
                 >
                   🚨 High Priority Files
                 </button>
+                <button
+                  className={`btn ${activeTab === 'forwarded' ? 'btn-primary' : 'btn-outline-primary'} me-2`}
+                  onClick={() => {
+                    setActiveTab('forwarded');
+                    loadFiles(
+                      selectedDepartment?.value || user?.user?.department,
+                      selectedDivision?.value,
+                      selectedUnit?.value,
+                      approvalStatus,
+                      'forwarded'
+                    );
+                  }}
+                >
+                  📤 Forwarded Files
+                </button>
               </div>
-              <div>
-                <Select
+              <div className="row g-2 align-items-end">
+                <div className="col-md-3">               <Select
                   options={departments}
                   value={selectedDepartment}
                   onChange={(selectedOption) => setSelectedDepartment(selectedOption)}
                   isSearchable={true}
                   placeholder="Search or Select Department"
                 />
+                </div>
+
 
                 {/* <select
               value={selectedDepartment || ''}
@@ -576,23 +596,24 @@ export default function FileInbox() {
     </option>
   ))}
 </select> */}
-                <br />
-                <Select
-                  options={divisions}
-                  value={selectedDivision}
-                  onChange={(selectedOption) => setSelectedDivision(selectedOption)}
-                  isSearchable={true}
-                  placeholder="Division"
-                />
-                <br />
-                <Select
-                  options={units}
-                  value={selectedUnit}
-                  onChange={(selectedOption) => setSelectedUnit(selectedOption)}
-                  isSearchable={true}
-                  placeholder="Unit"
-                />
-                <br />
+                <div className="col-md-3">
+                  <Select
+                    options={divisions}
+                    value={selectedDivision}
+                    onChange={(selectedOption) => setSelectedDivision(selectedOption)}
+                    isSearchable={true}
+                    placeholder="Division"
+                  />
+                </div>
+                <div className="col-md-3">
+                  <Select
+                    options={units}
+                    value={selectedUnit}
+                    onChange={(selectedOption) => setSelectedUnit(selectedOption)}
+                    isSearchable={true}
+                    placeholder="Unit"
+                  />
+                </div>
                 {/* <select
               value={selectedUnit}
              onChange={(e) => setSelectedUnit(e.target.value)}
@@ -610,23 +631,25 @@ export default function FileInbox() {
   ))}
 </select> */}
                 {/* </div> */}
-                <select id="approvalStatus" name="approvalStatus"
-                  value={approvalStatus} onChange={handleApprovalStatusChange}
-                  required
-                //  disabled={user?.user?.role == 'viewer' || viewMode}
-                >
-                  <option value="">-- Select Status --</option>
-                  <option value="approved">✅ Approved</option>
-                  <option value="rejected">❌ Rejected</option>
-                  <option value="pending">⏳ Pending</option>
-                </select>
-                <div className="d-flex">
+                <div className="col-md-3">
+                  <select id="approvalStatus" name="approvalStatus"
+                    value={approvalStatus} onChange={handleApprovalStatusChange}
+                    required
+                  //  disabled={user?.user?.role == 'viewer' || viewMode}
+                  >
+                    <option value="">-- Select Status --</option>
+                    <option value="approved">✅ Approved</option>
+                    <option value="rejected">❌ Rejected</option>
+                    <option value="pending">⏳ Pending</option>
+                  </select>
+                </div>
+                <div className="col-12 d-flex justify-content-end mt-2">
                   <button className="btn btn-primary ms-auto" onClick={handleFilterByDept}>Apply Filter</button>
                   <button className="btn btn-secondary ms-2" onClick={clearFilter}>Clear Filter</button>
                 </div>
               </div>
               <div className="card-body">
-                <table className="table table-striped table-hover table-bordered align-middle">
+                <table className="table table-striped table-hover table-bordered align-middle table-compact">
                   <thead className="table-light">
                     <tr>
                       <th></th>
@@ -642,6 +665,8 @@ export default function FileInbox() {
                       <th scope="col">Status</th>
                       <th></th>
                       {user?.user?.role_id == 1 && <th scope="col">Action</th>}
+                      <th></th>
+                      <th scope="col">Document Expiry Timer</th>
                     </tr>
                   </thead>
                   <tbody id="fileTableBody">
@@ -664,7 +689,7 @@ export default function FileInbox() {
                           <td>{index + 1}</td>
                           <td onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }} className={new Date(file?.date_added).toDateString() === new Date().toDateString() ? "highlight-today" : ""}>{file?.file_id}</td>
                           {/* <td>{file?.file_name}</td> */}
-                          {console.log('file_sub', file?.file_subject)}
+                          {/* {console.log('file_sub', file?.file_subject)} */}
                           <td>{file?.file_subject}</td>
                           {/* <td>{file.date_added}</td> */}
                           {/* <td>{new Date(file?.date_added).toLocaleString()}</td> */}
@@ -733,7 +758,7 @@ export default function FileInbox() {
               </div>
             </div>
           </div>
-          <Profile user={user} />
+          {/* <Profile user={user} /> */}
           {/* <div className="col-md-3">
       ZZZZZZZZZZZZZZZ
   </div> */}

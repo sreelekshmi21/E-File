@@ -13,6 +13,8 @@ const Signup = () => {
 
   const BASE_URL = import.meta.env.VITE_API_URL
 
+  const [showPassword, setShowPassword] = useState(false);
+
   // const [toast, setToast] = useState({ show: false, title: "", body: "" });
   const { showToast } = useToast();
 
@@ -24,54 +26,54 @@ const Signup = () => {
     e.preventDefault();
     console.log("Form Data Submitted:", formData);
     if (formData.password.length < 8) {
-    showToast("Validation Error", "Password must be at least 8 characters long.", "danger");
-    return; // Stop the form submission here
-  }
-  const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;
-  if (!specialCharPattern.test(formData.password)) {
-    showToast("Validation Error", "Password must contain at least one special character.", "danger");
-    return;
-  }
+      showToast("Validation Error", "Password must be at least 8 characters long.", "danger");
+      return; // Stop the form submission here
+    }
+    const specialCharPattern = /[!@#$%^&*(),.?":{}|<>]/;
+    if (!specialCharPattern.test(formData.password)) {
+      showToast("Validation Error", "Password must contain at least one special character.", "danger");
+      return;
+    }
 
-  // ✅ Email validation
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(formData?.email)) {
-    showToast("Error","Please enter a valid email address.", "danger");
-    return;
-  }
+    // ✅ Email validation
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(formData?.email)) {
+      showToast("Error", "Please enter a valid email address.", "danger");
+      return;
+    }
     // alert("Signup Successful!");
     // Here you can call your API to save the data
     try {
-    const response = await fetch(`${BASE_URL}/signup`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formData), // send form data
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      // alert("Signup Successful!");
-      console.log("Server response:", data);
-      // setToast({ show: true, title: "Signup Successful!", body: `` });
-      showToast("Signup Successful!", "", "success");
-
-      setFormData({
-        username: "",
-        email: "",
-        department: "",
-        password: "",
+      const response = await fetch(`${BASE_URL}/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData), // send form data
       });
-      
-    } else {
-      alert("Signup failed: " + data.error);
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // alert("Signup Successful!");
+        console.log("Server response:", data);
+        // setToast({ show: true, title: "Signup Successful!", body: `` });
+        showToast("Signup Successful!", "", "success");
+
+        setFormData({
+          username: "",
+          email: "",
+          department: "",
+          password: "",
+        });
+
+      } else {
+        alert("Signup failed: " + data.error);
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert("Something went wrong!");
     }
-  } catch (error) {
-    console.error("Error submitting form:", error);
-    alert("Something went wrong!");
-  }
   };
 
   return (
@@ -87,7 +89,7 @@ const Signup = () => {
               type="text"
               className="form-control"
               id="username"
-               name="username"
+              name="username"
               placeholder="Enter username"
               value={formData.username}
               onChange={handleChange}
@@ -99,7 +101,7 @@ const Signup = () => {
             <label htmlFor="password" className="form-label">
               Password
             </label>
-            <input
+            {/* <input
               type="password"
               className="form-control"
               id="password"
@@ -108,7 +110,27 @@ const Signup = () => {
               value={formData.password}
               onChange={handleChange}
               required
-            />
+            /> */}
+            <div className="input-group">
+              <input
+                type={showPassword ? "text" : "password"}
+                className="form-control"
+                id="password"
+                name="password"
+                placeholder="Enter password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+
+              <span
+                className="input-group-text"
+                style={{ cursor: "pointer" }}
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}></i>
+              </span>
+            </div>
           </div>
           <div className="mb-3">
             <label htmlFor="email" className="form-label">
@@ -142,37 +164,37 @@ const Signup = () => {
           </div>
           <div className="mb-3">
             <label className="form-label">Select Role</label>
-              <select name="role_id"
-                     value={formData.role_id}
-                     onChange={handleChange}
-                      required>
-                  <option value="1">Admin</option>
-                  <option value="2">Staff</option>
-                  <option value="3">Viewer</option>
-              </select>
+            <select name="role_id"
+              value={formData.role_id}
+              onChange={handleChange}
+              required>
+              <option value="1">Admin</option>
+              <option value="2">Staff</option>
+              <option value="3">Viewer</option>
+            </select>
           </div>
           <button type="submit" className="btn btn-primary w-100">
-           Signup
+            Signup
           </button>
-        </form> 
+        </form>
         <div className="text-center mt-3">
           <nav>
             <ul>
-                <li>
-                    <Link to='/'>Back To Login</Link> 
-                </li>
+              <li>
+                <Link to='/'>Back To Login</Link>
+              </li>
             </ul>
-            
+
           </nav>
         </div>
-         <div className="text-center mt-3">
+        <div className="text-center mt-3">
           <nav>
             <ul>
-                <li>
-                    <Link to='/adminpanel'>Back to Admin Panel</Link>
-                </li>
+              <li>
+                <Link to='/adminpanel'>Back to Admin Panel</Link>
+              </li>
             </ul>
-            
+
           </nav>
         </div>
       </div>

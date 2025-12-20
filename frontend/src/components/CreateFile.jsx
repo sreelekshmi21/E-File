@@ -1124,7 +1124,7 @@ export default function CreateFile() {
     </div> */}
             </div>
             <div className="col-md-12">
-              <label className="form-label" htmlFor="remarks">Remarks:</label>
+              <label className="form-label" htmlFor="remarks">File Matter:</label>
               {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
               <RemarksEditor formData={formData} setFormData={setFormData}
                 viewMode={viewMode} />
@@ -1297,9 +1297,9 @@ export default function CreateFile() {
               <form onSubmit={(e) =>
                 handleSave({
                   e,
-                  mode: "create",
+                  mode: fileToEdit?.id ? "edit" : "create",
                   formData,
-                  fileToEdit: null,
+                  fileToEdit: fileToEdit || null,
                   selectedDepartment,
                   selectedReceiver,
                   selectedDivision,
@@ -1329,7 +1329,7 @@ export default function CreateFile() {
 
           {/* Right Column - DocumentEditor */}
           <div className="col-md-12 bg-light border p-4">
-            <h4 className="text-center">Comments</h4>
+            {/* <h4 className="text-center">Comments</h4> */}
 
             {/* <h3>Comments</h3> */}
             {comments?.map((comment) => (
@@ -1346,8 +1346,8 @@ export default function CreateFile() {
               </div>
             ))}
             <div className="container">
-              <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
-                viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id} />
+              {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
+                viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id} /> */}
               {/* Optional: Show Timeline Button */}
               {/* <button className="btn btn-success px-5 mt-3" onClick={handleTimeline}>Show Timeline</button> */}
               <div style={{ marginTop: "20px" }}><button
