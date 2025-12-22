@@ -207,7 +207,7 @@ export default function CreateFile() {
     return '';
   };
 
-  const { handleSave } = useFileSave({
+  const { handleCreateFile, handleSendFile } = useFileSave({
     BASE_URL,
     user,
     showToast,
@@ -1295,7 +1295,7 @@ export default function CreateFile() {
             {/* Final Save Button */}
             {!viewMode && (
               <form onSubmit={(e) =>
-                handleSave({
+                handleCreateFile({
                   e,
                   mode: fileToEdit?.id ? "edit" : "create",
                   formData,
@@ -1312,10 +1312,21 @@ export default function CreateFile() {
                 <div className="d-flex justify-content-center mt-4 gap-3">
                   <div>
                     <button className="btn btn-success px-5" type="submit">
-                      {fileToEdit?.id ? 'Update' : 'Send'}
+                      {fileToEdit?.id ? 'Update' : 'Create'}
                     </button>
                   </div>
 
+                  {/* <button
+                    disabled={!fileToEdit?.id}
+                    onClick={(e) =>
+                      handleSendFile({
+                        e,
+                        fileToEdit,
+                        selectedReceiver
+                      })}
+                  >
+                    Send File
+                  </button> */}
                   {fileToEdit?.id && <div>
                     <button className="btn btn-secondary px-5" onClick={handleCancel}>
                       Cancel

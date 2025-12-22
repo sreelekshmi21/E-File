@@ -289,7 +289,7 @@ export default function ViewPage() {
   };
 
 
-  const { handleSave } = useFileSave({
+  const { handleSendFile } = useFileSave({
     BASE_URL,
     user,
     showToast
@@ -533,20 +533,27 @@ export default function ViewPage() {
         </div>
       </div>
       {fileToEdit.status !== "APPROVED" && <div className="update-send-container">
-        <button className="update-send-btn btn btn-primary" onClick={(e) =>
-          handleSave({
-            e,
-            mode: "send",
-            // formData,
-            fileToEdit,
-            selectedReceiver,
-            // selectedDivision,
-            // selectedUnit,
-            // approvalStatus,
-            // fileName,
-            // setFileNumber
-          })
-        }>
+        <button className="update-send-btn btn btn-primary"
+          // onClick={(e) =>
+          //   handleSave({
+          //     e,
+          //     mode: "send",
+          //     // formData,
+          //     fileToEdit,
+          //     selectedReceiver,
+          //     // selectedDivision,
+          //     // selectedUnit,
+          //     // approvalStatus,
+          //     // fileName,
+          //     // setFileNumber
+          //   })
+          //}
+          onClick={(e) =>
+            handleSendFile({
+              e,
+              fileToEdit,
+              selectedReceiver
+            })}>
           Update & Send
         </button>
       </div>}
