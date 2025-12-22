@@ -5,72 +5,74 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
 
-     const { login } = useAuth();
+  const { login } = useAuth();
 
-     const BASE_URL = import.meta.env.VITE_API_URL 
+  const BASE_URL = import.meta.env.VITE_API_URL
 
-     const [loginData, setLoginData] = useState({
-        username: "",
-        password: "",
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [loginData, setLoginData] = useState({
+    username: "",
+    password: "",
+  });
+
+  const navigate = useNavigate();
+
+  // const handleLoginChange = (e) => {
+  //       const { name, value } = e.target;
+  //       setLoginData((prev) => ({ ...prev, [name]: value }));
+  // };
+
+  const handleLoginChange = (e) => {
+    setLoginData({ ...loginData, [e.target.name]: e.target.value });
+  };
+
+  const { showToast } = useToast();
+
+  //  const [toast, setToast] = useState({ show: false, title: "", body: "" });
+
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    // console.log("Email:", email, "Password:", password);
+    // Add authentication logic here
+    try {
+      const response = await fetch(`${BASE_URL}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(loginData),
       });
 
-      const navigate = useNavigate();
-    
-      // const handleLoginChange = (e) => {
-      //       const { name, value } = e.target;
-      //       setLoginData((prev) => ({ ...prev, [name]: value }));
-      // };
+      const data = await response.json();
 
-      const handleLoginChange = (e) => {
-          setLoginData({ ...loginData, [e.target.name]: e.target.value });
-      };
+      if (response.ok) {
+        // alert("Login Successful!");
+        console.log("User data:", data.user);
+        // localStorage.setItem("user", JSON.stringify(data.user));
+        //  setToast({ show: true, title: "Login Success", body: `Welcome ${loginData.username}` });
+        // navigate("/dashboard");
+        login(data);
+        showToast("Login Success", `Welcome ${loginData.username}`, "success");
+        setTimeout(() => {
+          navigate("/dashboard")
+        }, 2000);
 
-      const { showToast } = useToast();
-
-      //  const [toast, setToast] = useState({ show: false, title: "", body: "" });
-
-
-      const handleSubmit = async(e) => {
-        e.preventDefault();
-        // console.log("Email:", email, "Password:", password);
-        // Add authentication logic here
-        try {
-    const response = await fetch(`${BASE_URL}/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(loginData),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      // alert("Login Successful!");
-      console.log("User data:", data.user);
-      // localStorage.setItem("user", JSON.stringify(data.user));
-      //  setToast({ show: true, title: "Login Success", body: `Welcome ${loginData.username}` });
-      // navigate("/dashboard");
-      login(data);
-      showToast("Login Success", `Welcome ${loginData.username}`, "success");
-       setTimeout(() =>  {
-        navigate("/dashboard")
-      }, 2000);
-
-      // ✅ Reset form after login
-      setLoginData({ username: "", password: "" });
-    } else {
-      // alert("Login failed: " + data.error);
-      showToast("Login Failed", data.error || "Invalid credentials", "danger")
+        // ✅ Reset form after login
+        setLoginData({ username: "", password: "" });
+      } else {
+        // alert("Login failed: " + data.error);
+        showToast("Login Failed", data.error || "Invalid credentials", "danger")
+      }
+    } catch (error) {
+      console.error("Error logging in:", error);
+      alert("Something went wrong!");
     }
-  } catch (error) {
-    console.error("Error logging in:", error);
-    alert("Something went wrong!");
-  }
   };
 
   return (
-   <div className="d-flex vh-100 justify-content-center align-items-center bg-light">
+    <div className="d-flex vh-100 justify-content-center align-items-center bg-light">
       <div className="card shadow p-4" style={{ width: "22rem" }}>
         <h3 className="text-center mb-4">Login</h3>
         <form onSubmit={handleSubmit}>
@@ -94,7 +96,7 @@ export default function Login() {
             <label htmlFor="password" className="form-label">
               Password
             </label>
-            <input
+            {/* <input
               type="password"
               className="form-control"
               id="password"
@@ -103,7 +105,27 @@ export default function Login() {
               value={loginData.password}
               onChange={handleLoginChange}
               required
-            />
+            /> */}
+            <div className="input-group">
+              <input
+                type={showPassword ? "text" : "password"}
+                className="form-control"
+                id="password"
+                name="password"
+                placeholder="Enter password"
+                value={loginData.password}
+                onChange={handleLoginChange}
+                required
+              />
+
+              <span
+                className="input-group-text"
+                style={{ cursor: "pointer" }}
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}></i>
+              </span>
+            </div>
           </div>
 
           <button type="submit" className="btn btn-primary w-100">
@@ -119,7 +141,7 @@ export default function Login() {
           </small>
         </div> */}
       </div>
-      
+
       {/* <Toast
         show={toast.show}
         title={toast.title}

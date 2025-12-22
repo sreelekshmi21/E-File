@@ -18,6 +18,7 @@ import RedList from './components/RedList'
 import HighPriorityList from './components/HighPriorityList'
 import useIdleTimer from './utils/dbProvider'
 import FileCount from './components/FileCount'
+import ViewPage from './components/ViewPage'
 
 function App() {
 
@@ -46,6 +47,7 @@ function App() {
     { path: "/redlist", element: <RedList /> },
     { path: "/highpriority", element: <HighPriorityList /> },
     { path: "/filecount", element: <FileCount /> },
+     { path: "/viewpage", element: <ViewPage /> },
   ]);
   return routes;
 };
@@ -53,7 +55,10 @@ function App() {
   return (
     <>
       {/* <BrowserRouter> */}
-        <AppRoutes />
+      <div className="app-root">
+      <AppRoutes />
+      </div>
+       
     {/* </BrowserRouter>        */}
     </>
   )

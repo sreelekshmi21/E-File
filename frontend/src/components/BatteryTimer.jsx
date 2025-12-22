@@ -113,11 +113,11 @@ export default function BatteryTimer({ totalTimeMs = 3 * 24 * 60 * 60 * 1000, fi
   const BASE_URL = import.meta.env.VITE_API_URL;
   const [showTooltip, setShowTooltip] = useState(false);
 
-   const [expired, setExpired] = useState(false);
+  const [expired, setExpired] = useState(false);
 
   const { user } = useAuth();
 
-   const hasExpiredRef = useRef(false); // 🔹 prevents multiple triggers
+  const hasExpiredRef = useRef(false); // 🔹 prevents multiple triggers
 
   // 🔹 Get expiry = file.created_at + 2 minutes
   // const expiryTime = new Date(file.date_added).getTime() + totalTimeMs;
@@ -130,12 +130,12 @@ export default function BatteryTimer({ totalTimeMs = 3 * 24 * 60 * 60 * 1000, fi
   const handleFileExpiry = async () => {
     if (hasExpiredRef.current) return;
     hasExpiredRef.current = true;
-     setExpired(true);
+    setExpired(true);
     try {
       await fetch(`${BASE_URL}/api/files/${file.id}/expire`, { method: "PUT" });
       // console.log("⛔ File expired and moved to Red List");
 
-          if (
+      if (
         user &&
         file?.department &&
         user?.user?.department === file?.department
@@ -175,7 +175,7 @@ export default function BatteryTimer({ totalTimeMs = 3 * 24 * 60 * 60 * 1000, fi
 
   const percentage = (remaining / totalTimeMs) * 100;
   const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
-const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+  const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
   const minutes = Math.floor((remaining / 1000 / 60) % 60);
   const seconds = Math.floor((remaining / 1000) % 60);
 
@@ -195,19 +195,19 @@ const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
     percentage > 80
       ? "#4CAF50"
       : percentage > 20
-      ? "#FF9800"
-      : "#F44336";
+        ? "#FF9800"
+        : "#F44336";
 
-      const formattedExpiry = expiryDate.toLocaleString([], {
-  weekday: "short",  // e.g., "Tue"
-  year: "numeric",   // e.g., "2025"
-  month: "short",    // e.g., "Nov"
-  day: "2-digit",    // e.g., "12"
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hour12: true,
-});
+  const formattedExpiry = expiryDate.toLocaleString([], {
+    weekday: "short",  // e.g., "Tue"
+    year: "numeric",   // e.g., "2025"
+    month: "short",    // e.g., "Nov"
+    day: "2-digit",    // e.g., "12"
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
 
   const isExpired = remaining === 0;
 
@@ -217,33 +217,52 @@ const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      <p>🔋 Document Expiry Timer</p>
+      {/* <p>🔋 Document Expiry Timer</p> */}
+      <div className="battery-wrapper">
+        <div className="battery">
+          {/* <div className="battery-tip"></div> */}
 
-      <div className="battery">
-        <div className="battery-tip"></div>
-        <div
-          className="battery-level"
-          style={{
-            width: `${percentage}%`,
-            backgroundColor: color,
-          }}
-        ></div>
+          <div
+            className="battery-level"
+            style={{
+              width: `${percentage}%`,
+              backgroundColor: color,
+            }}
+          ></div>
+
+          {/* ✅ Overlay text */}
+          <div className="battery-tooltip">
+            {isExpired ? (
+              "Expired ❌"
+            ) : (
+              <>
+                {days > 0 && `${days}d `}
+                {hours > 0 && `${hours}h `}
+                {minutes}m {seconds.toString().padStart(2, "0")}s remaining
+              </>
+            )}
+          </div>
+        </div>
+        <div className="timer-icon">🕒
+          <div className="clock-tooltip">
+            <p
+              className="expiry-time"
+              style={{
+                color: isExpired ? "#F44336" : "#666",
+                fontWeight: isExpired ? "600" : "normal",
+              }}
+            >
+              {isExpired ? "🕒 Expired at: " : "🕒 Expires at: "}
+              <strong>{formattedExpiry}</strong>
+            </p>
+          </div>
+        </div>
       </div>
 
-      <p className="timer-text">
-        {isExpired
-          ? "Expired ❌"
-          : (
-  <>
-    {days > 0 && `${days}d `}
-    {hours > 0 && `${hours}h `}
-    {minutes}m {seconds.toString().padStart(2, "0")}s remaining
-  </>
-)}
-      </p>
+
 
       {/* 🔹 Expiry Time Display */}
-      <p
+      {/* <p
         className="expiry-time"
         style={{
           color: isExpired ? "#F44336" : "#666",
@@ -252,7 +271,7 @@ const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
       >
         {isExpired ? "🕒 Expired at: " : "🕒 Expires at: "}
         <strong>{formattedExpiry}</strong>
-      </p>
+      </p> */}
 
       {showTooltip && (
         <div
