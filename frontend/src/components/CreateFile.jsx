@@ -1233,10 +1233,10 @@ export default function CreateFile() {
                 </div>
               </div>
             </div>}
-            <div className="row mb-3">
+            {/* <div className="row mb-3">
               <div className="col-md-12 d-flex align-items-center gap-2">
                 <label className="form-label mb-0" htmlFor="receiver">Forwarded To:</label>
-                {/* <input type="text" name="receiver" id="receiver" className="form-control" value={formData?.receiver} onChange={handleChange} disabled={viewMode}/> */}
+              
                 <Select
                   options={departments}
                   name="receiver"
@@ -1245,10 +1245,9 @@ export default function CreateFile() {
                   isSearchable={true}
                   placeholder="Search or Select Department"
                   isDisabled={viewMode}
-                // isMulti // This prop enables multi-selection
                 />
               </div>
-            </div>
+            </div> */}
             {/* {fileToEdit?.id && user?.user?.role === 'admin' && <button 
             className="btn btn-primary ms-auto"
             onClick={() => handleEditClick(fileToEdit)}>EDIT FILE</button>}

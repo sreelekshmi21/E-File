@@ -1264,8 +1264,8 @@ app.get("/api/files", (req, res) => {
         query += ` AND receiver = ?`;
         values.push(departmentId);
       } else if (mode === "forwarded") {
-        query += ` AND sender = ?`;
-        values.push(departmentId);
+        query += ` AND sender = ? OR file_id LIKE ?`;
+        values.push(departmentId, `${departmentId}/%`);
       } else {
         query += ` AND (department = ? OR receiver = ?)`;
         values.push(departmentId, departmentId);
@@ -1299,8 +1299,8 @@ app.get("/api/files", (req, res) => {
       conditions.push(`receiver = ?`);
       values.push(departmentId);
     } else if (mode === "forwarded") {
-      conditions.push(`sender = ?`);
-      values.push(departmentId);
+      conditions.push(`sender = ? OR file_id LIKE ?`);
+      values.push(departmentId, `${departmentId}/%`);
     } else {
       conditions.push(`(department = ? OR receiver = ?)`);
       values.push(departmentId, departmentId);
@@ -2696,7 +2696,7 @@ app.put("/api/files/:id/send", async (req, res) => {
     // }
 
     // 3️⃣ Prevent re-sending
-    if (file.status !== "DRAFT") {
+    if (file.status !== "DRAFT" && file.status !== "pending") {
       return res.status(400).json({
         message: "Only draft files can be sent"
       });
@@ -2707,9 +2707,10 @@ app.put("/api/files/:id/send", async (req, res) => {
       `UPDATE files
        SET department = ?,
            receiver = ?,
-           status = 'SENT'
+           sender = ?,
+           status = 'pending'
        WHERE id = ?`,
-      [toDepartment, toDepartment, id]
+      [toDepartment, toDepartment, file?.department, id]
     );
 
     // 5️⃣ (Optional but recommended) Audit log
@@ -2723,7 +2724,7 @@ app.put("/api/files/:id/send", async (req, res) => {
     res.json({
       message: "File sent successfully",
       fileId: id,
-      from: user.department,
+      from: file.department,
       to: toDepartment
     });
 
