@@ -207,7 +207,7 @@ export default function CreateFile() {
     return '';
   };
 
-  const { handleSave } = useFileSave({
+  const { handleCreateFile, handleSendFile } = useFileSave({
     BASE_URL,
     user,
     showToast,
@@ -1233,10 +1233,10 @@ export default function CreateFile() {
                 </div>
               </div>
             </div>}
-            <div className="row mb-3">
+            {/* <div className="row mb-3">
               <div className="col-md-12 d-flex align-items-center gap-2">
                 <label className="form-label mb-0" htmlFor="receiver">Forwarded To:</label>
-                {/* <input type="text" name="receiver" id="receiver" className="form-control" value={formData?.receiver} onChange={handleChange} disabled={viewMode}/> */}
+              
                 <Select
                   options={departments}
                   name="receiver"
@@ -1245,10 +1245,9 @@ export default function CreateFile() {
                   isSearchable={true}
                   placeholder="Search or Select Department"
                   isDisabled={viewMode}
-                // isMulti // This prop enables multi-selection
                 />
               </div>
-            </div>
+            </div> */}
             {/* {fileToEdit?.id && user?.user?.role === 'admin' && <button 
             className="btn btn-primary ms-auto"
             onClick={() => handleEditClick(fileToEdit)}>EDIT FILE</button>}
@@ -1295,7 +1294,7 @@ export default function CreateFile() {
             {/* Final Save Button */}
             {!viewMode && (
               <form onSubmit={(e) =>
-                handleSave({
+                handleCreateFile({
                   e,
                   mode: fileToEdit?.id ? "edit" : "create",
                   formData,
@@ -1312,10 +1311,21 @@ export default function CreateFile() {
                 <div className="d-flex justify-content-center mt-4 gap-3">
                   <div>
                     <button className="btn btn-success px-5" type="submit">
-                      {fileToEdit?.id ? 'Update' : 'Send'}
+                      {fileToEdit?.id ? 'Update' : 'Create'}
                     </button>
                   </div>
 
+                  {/* <button
+                    disabled={!fileToEdit?.id}
+                    onClick={(e) =>
+                      handleSendFile({
+                        e,
+                        fileToEdit,
+                        selectedReceiver
+                      })}
+                  >
+                    Send File
+                  </button> */}
                   {fileToEdit?.id && <div>
                     <button className="btn btn-secondary px-5" onClick={handleCancel}>
                       Cancel
