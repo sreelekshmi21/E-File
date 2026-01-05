@@ -122,7 +122,7 @@ export default function CreateFile() {
   }, [fileToEdit, data, viewMode, departments, divisions, units]) // only run this effect when `dat` changes
 
 
-  const [file, setFile] = useState(null)
+  const [file, setFile] = useState([])
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -192,9 +192,13 @@ export default function CreateFile() {
   };
 
   const handleFileChange = (e) => {
-    setFile(Array.from(e.target.files));
-    // const selectedFiles = Array.from(e.target.files);
-    // setFile((prev) => [...prev, ...selectedFiles]);
+    // setFile(Array.from(e.target.files));
+    const selectedFiles = Array.from(e.target.files);
+
+    setFile((prevFiles) => [...prevFiles, ...selectedFiles]);
+
+    // reset input so same file can be selected again if needed
+    e.target.value = null
   };
 
   const generateFileName = () => {
@@ -955,6 +959,11 @@ export default function CreateFile() {
     setSelectedUnit(null);   // ✅ safe here
   };
 
+  const removeFile = (indexToRemove) => {
+    setFile((prev) =>
+      prev.filter((_, index) => index !== indexToRemove)
+    );
+  };
 
   return (
     <>
@@ -1212,7 +1221,7 @@ export default function CreateFile() {
             )}
             {!viewMode && <div className="row mb-4">
               <div className="col-md-12">
-                <label className="form-label">Attachments:</label>
+                {/* <label className="form-label">Attachments:</label>
                 <div className="input-group">
                   <label htmlFor="file" className="btn btn-primary">
                     Choose Files
@@ -1229,6 +1238,38 @@ export default function CreateFile() {
                     {file?.length > 0
                       ? file?.map((file) => file.name).join(', ')
                       : "No files selected"}
+                  </div>
+                </div> */}
+                <div className="attachments-wrapper">
+                  <label className="attachments-label">Attachments:</label>
+
+                  <div className="attachments-row">
+                    <label htmlFor="fileInput" className="btn btn-primary">
+                      Choose Files
+                    </label>
+
+                    <input
+                      type="file"
+                      id="fileInput"
+                      multiple
+                      hidden
+                      onChange={handleFileChange}
+                    />
+
+                    {file.map((file, index) => (
+                      <div key={index} className="file-chip">
+                        <span className="file-name" title={file.name}>
+                          {file.name}
+                        </span>
+                        <button
+                          type="button"
+                          className="file-remove"
+                          onClick={() => removeFile(index)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1305,7 +1346,8 @@ export default function CreateFile() {
                   selectedUnit,
                   approvalStatus,
                   fileName,
-                  setFileNumber
+                  setFileNumber,
+                  file
                 })
               }>
                 <div className="d-flex justify-content-center mt-4 gap-3">

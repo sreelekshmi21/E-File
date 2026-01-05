@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Select from 'react-select';
 import useFileSave from "../hooks/useFileSave";
+import ReusableModal from '../utils/ReusableModal';
 
 export default function ViewPage() {
 
@@ -22,6 +23,8 @@ export default function ViewPage() {
   const [file, setFile] = useState([])
 
   const [mainFileName, setMainFileName] = useState('')
+
+  const [showModal, setShowModal] = useState(false);
 
 
   const [documents, setDocuments] = useState(data)
@@ -53,10 +56,16 @@ export default function ViewPage() {
 
 
   const handleFileChange = (e) => {
-    setFile(Array.from(e.target.files));
+    // setFile(Array.from(e.target.files));
     //  setDocuments(prev => [...prev, ...file]);   // append below
     // const selectedFiles = Array.from(e.target.files);
     // setFile((prev) => [...prev, ...selectedFiles]);
+    const selectedFiles = Array.from(e.target.files);
+
+    setFile((prevFiles) => [...prevFiles, ...selectedFiles]);
+
+    // reset input so same file can be selected again if needed
+    e.target.value = null
   };
 
 
@@ -197,7 +206,7 @@ export default function ViewPage() {
 
       // Reset selected files
       setFile([]);
-      document.getElementById("file").value = "";
+      document.getElementById("fileInput").value = "";
 
       fetchAttachments(fileName);
     } catch (err) {
@@ -353,6 +362,39 @@ export default function ViewPage() {
     }
   };
 
+  const handleHighPriority = () => {
+    setShowModal(true)
+  }
+
+
+  const confirmHighPriority = async (id) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/files/${id}/request-priority`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user?.user?.token}`
+        }
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        showToast(data.message, "", "success"); // <-- SHOW SERVER MESSAGE
+      } else {
+        showToast(data.message || "Something went wrong", "", "error");
+      }
+      setShowModal(false)
+    } catch (error) {
+      console.error(error);
+      showToast("Network error", "error");
+    }
+  }
+
+  const removeFile = (indexToRemove) => {
+    setFile((prev) =>
+      prev.filter((_, index) => index !== indexToRemove)
+    );
+  };
 
 
   return (
@@ -408,7 +450,7 @@ export default function ViewPage() {
                       {/* const isImage = isImageFile(file.file_name); */}
                       <a key={index}
 
-                        href={`http://localhost:5000${file.file_path}`}
+                        href={`${BASE_URL}${file.file_path}`}
                         target="_blank"
                         rel="noreferrer"
                         className="file-card"
@@ -419,7 +461,7 @@ export default function ViewPage() {
                         <div className="file-preview-container">
                           {isImageFile(file.file_name) ? (
                             <img
-                              src={`http://localhost:5000${file.file_path}`}
+                              src={`${BASE_URL}${file.file_path}`}
                               alt={file.file_name}
                               className="file-thumbnail"
                               style={{ width: '100%', height: '100px', objectFit: 'cover' }}
@@ -462,7 +504,7 @@ export default function ViewPage() {
       {/* Upload Section Below */}
 
       <div className="col-md-12">
-        <h4>Attachments:</h4>
+        {/* <h4>Attachments:</h4>
         <div className="input-group">
           <label htmlFor="file" className="btn btn-primary">
             Choose Files
@@ -473,23 +515,44 @@ export default function ViewPage() {
             name="file"
             multiple
             onChange={handleFileChange}
-            //        onChange={(e) => {
-            //   const selectedFiles = Array.from(e.target.files);
-
-            //   const attachments = selectedFiles.map(file => ({
-            //     id: Date.now() + Math.random(),
-            //     filename: file.name,
-            //     path: URL.createObjectURL(file),
-            //   }));
-            //     setFile(selectedFiles);
-            //   handleNewAttachment(attachments); // send array
-            // }}
             style={{ display: 'none' }}
           />
           <div className="form-control bg-white">
             {file?.length > 0
               ? file?.map((file) => file.name).join(', ')
               : "No files selected"}
+          </div>
+        </div> */}
+        <div className="attachments-wrapper">
+          <label className="attachments-label">Attachments:</label>
+
+          <div className="attachments-row">
+            <label htmlFor="fileInput" className="btn btn-primary">
+              Choose Files
+            </label>
+
+            <input
+              type="file"
+              id="fileInput"
+              multiple
+              hidden
+              onChange={handleFileChange}
+            />
+
+            {file.map((file, index) => (
+              <div key={index} className="file-chip">
+                <span className="file-name" title={file.name}>
+                  {file.name}
+                </span>
+                <button
+                  type="button"
+                  className="file-remove"
+                  onClick={() => removeFile(index)}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -572,6 +635,19 @@ export default function ViewPage() {
           Reject
         </button>
       </div>}
+      <div className="container">
+        <div style={{ marginTop: "20px" }}><button
+          className="btn btn-warning px-5"
+          onClick={handleHighPriority}>Request High Priority</button></div>
+      </div>
+      {showModal && <ReusableModal
+        showModal={showModal}
+        setShowModal={setShowModal}
+        title="Confirm High Priority"
+        message="Are you sure you want to request admin approval to mark this file as High Priority?"
+        confirmText="Send High Priority Request"
+        confirmVariant="danger"
+        onConfirm={() => confirmHighPriority(fileToEdit?.id)} />}
     </>
   );
 

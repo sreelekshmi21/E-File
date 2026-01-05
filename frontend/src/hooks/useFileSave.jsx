@@ -16,7 +16,9 @@ export default function useFileSave({
         selectedDepartment,
         selectedDivision,
         selectedUnit,
-        setFileNumber
+        setFileNumber,
+        formData,
+        file
     }) => {
         e.preventDefault();
 
@@ -37,25 +39,27 @@ export default function useFileSave({
 
             const file_id = generateFileName();
 
-            const formData = new FormData();
-            formData.append("file_no", file_no);
-            formData.append("file_id", file_id);
-            formData.append("fileName", file_id);
-            formData.append("file_subject", file_subject);
-            formData.append("sender", user?.user?.department);
-            formData.append("current_status", user?.user?.department);
-            formData.append("status", "DRAFT");
-            formData.append("department", selectedDepartment?.value);
-            formData.append("division", selectedDivision?.value);
-            formData.append("unit", selectedUnit?.value);
+            const formDatas = new FormData();
+            formDatas.append("file_no", file_no);
+            formDatas.append("file_id", file_id);
+            formDatas.append("fileName", file_id);
+            formDatas.append("file_subject", file_subject);
+            formDatas.append("sender", user?.user?.department);
+            formDatas.append("current_status", user?.user?.department);
+            formDatas.append("status", "DRAFT");
+            formDatas.append("department", selectedDepartment?.value);
+            formDatas.append("division", selectedDivision?.value);
+            formDatas.append("unit", selectedUnit?.value);
+            formDatas.append("remarks", formData?.remarks || "");
 
             /* Attachments */
-            const files = document.getElementById("file")?.files || [];
-            for (let f of files) formData.append("file", f);
+            // const files = document.getElementById("file")?.files || [];
+            // for (let f of files) formDatas.append("file", f);
 
+            for (let f of file) formDatas.append("file", f);
             const res = await fetch(`${BASE_URL}/createfilewithattachments`, {
                 method: "POST",
-                body: formData
+                body: formDatas
             });
 
             const result = await res.json();
