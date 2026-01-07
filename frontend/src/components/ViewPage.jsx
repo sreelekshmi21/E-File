@@ -561,13 +561,63 @@ export default function ViewPage() {
         <h3>Notes</h3>
         {notes.map(note => (
           <div key={note?.id} className="note-block">
-            {console.log('note', note)}
-            <p>{note?.note}</p>
+            {/* {console.log('note', note)} */}
+            <p style={{ whiteSpace: 'pre-wrap' }}>{(() => {
+              const text = note?.note || '';
+              const parts = text.split(/(\[\[.*?\|.*?\]\])/g);
+              return parts.map((part, index) => {
+                const match = part.match(/^\[\[(.*?)\|(.*?)\]\]$/);
+                if (match) {
+                  const [_, name, url] = match;
+                  return (
+                    <a
+                      key={index}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#007bff', fontWeight: 'bold', textDecoration: 'underline', cursor: 'pointer' }}
+                      title={`Open ${name}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      📎 {name}
+                    </a>
+                  );
+                }
+                return part;
+              });
+            })()}</p>
             <small>
               — <strong>{note?.username}</strong>, {note?.department} {new Date(note?.created_at).toLocaleString()}
             </small>
           </div>
         ))}
+
+        <div className="mb-2">
+          <label className="form-label">Tag a File:</label>
+          <select
+            className="form-select"
+            onChange={(e) => {
+              if (e.target.value) {
+                const [name, url] = e.target.value.split('|||');
+                setNote(prev => prev + ` [[${name}|${url}]] `);
+                e.target.value = ''; // Reset selection
+              }
+            }}
+          >
+            <option value="">-- Select a file to tag --</option>
+            {documents.map((doc, i) => {
+              const url = doc.path.startsWith("blob:") ? doc.path : `${BASE_URL}/${doc.path}`;
+              return <option key={`doc-${i}`} value={`${doc.filename}|||${url}`}>{doc.filename} (Initial)</option>
+            })}
+            {Object.entries(attachments).map(([dept, files]) =>
+              files.map((f, i) => (
+                <option key={`att-${dept}-${i}`} value={`${f.file_name}|||${BASE_URL}${f.file_path}`}>
+                  {f.file_name} ({dept})
+                </option>
+              ))
+            )}
+          </select>
+        </div>
 
         <textarea name="note" id="note" className="form-control"
           rows="5"
