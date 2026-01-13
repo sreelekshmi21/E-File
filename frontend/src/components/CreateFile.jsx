@@ -971,7 +971,7 @@ export default function CreateFile() {
         <div className="row">
           <Sidebar />
           {/* Left Column - Form */}
-          <div className="col-md-5 bg-light border p-4"><div className="row mb-3">
+          {/* <div className="col-md-5 bg-light border p-4"><div className="row mb-3">
             <label>Notes</label>
             {notes.map(note => (
               <div key={note?.id} className="note-block">
@@ -990,8 +990,8 @@ export default function CreateFile() {
             <button className="btn btn-primary mt-3" onClick={handleSaveNote}>
               Add Note
             </button>
-          </div></div>
-          <div className="col-md-5 bg-light border p-4">
+          </div></div> */}
+          <div className="col-md-10 bg-light border p-4">
             {/* <h4 className="text-center mb-4">CREATE FILE</h4>
       <button>EDIT FILE</button> */}
             <div className="d-flex align-items-center mb-4">
@@ -1011,7 +1011,7 @@ export default function CreateFile() {
                   onChange={(selectedOption) => setSelectedDepartment(selectedOption)}
                   isSearchable={true}
                   placeholder="Search or Select Department"
-                  isDisabled={viewMode}
+                  isDisabled={true}
                 />
                 {/* <select
               value={selectedDepartment || ''}
@@ -1402,9 +1402,9 @@ export default function CreateFile() {
                 viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id} /> */}
               {/* Optional: Show Timeline Button */}
               {/* <button className="btn btn-success px-5 mt-3" onClick={handleTimeline}>Show Timeline</button> */}
-              <div style={{ marginTop: "20px" }}><button
+              {/* <div style={{ marginTop: "20px" }}><button
                 className="btn btn-warning px-5"
-                onClick={handleHighPriority}>Request High Priority</button></div>
+                onClick={handleHighPriority}>Request High Priority</button></div> */}
             </div>
 
             {/* <div class="card w-75">
