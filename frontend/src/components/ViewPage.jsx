@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Select from 'react-select';
@@ -11,6 +11,8 @@ export default function ViewPage() {
   const BASE_URL = import.meta.env.VITE_API_URL
   const location = useLocation()
   const { fileToEdit, data } = location.state || {};
+
+  const navigate = useNavigate();
 
   const [selectedFiles, setSelectedFiles] = useState([]);
 
@@ -396,6 +398,21 @@ export default function ViewPage() {
     );
   };
 
+  const handleTimeline = (file) => {
+    // e.preventDefault();
+    navigate('/filetimeline', {
+      state: {
+        fileId: file?.id,
+        fileName: file?.file_id
+      }
+    })
+  }
+
+
+  const handleCancel = () => {
+    navigate('/fileinbox')
+  }
+
 
   return (
     <>
@@ -685,10 +702,23 @@ export default function ViewPage() {
           Reject
         </button>
       </div>}
-      <div className="container">
+      <div className="container d-flex justify-content-between">
         <div style={{ marginTop: "20px" }}><button
           className="btn btn-warning px-5"
           onClick={handleHighPriority}>Request High Priority</button></div>
+        <div className="ms-auto">
+          <button
+            className="btn btn-secondary px-5"
+            onClick={() => handleTimeline(fileToEdit)}
+          >
+            File Timeline
+          </button>
+        </div>
+        <div>
+          <button className="btn btn-secondary px-5" onClick={handleCancel}>
+            Cancel
+          </button>
+        </div>
       </div>
       {showModal && <ReusableModal
         showModal={showModal}

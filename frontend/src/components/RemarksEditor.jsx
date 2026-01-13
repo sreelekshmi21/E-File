@@ -14,15 +14,24 @@ import { Editor } from '@tinymce/tinymce-react';
 
 export default function RemarksEditor({ formData, setFormData, viewMode }) {
   const editorRef = useRef(null);
-  const handleEditorChange = (content) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      remarks: content
-    }));
+  // const handleEditorChange = (content) => {
+  //   setFormData((prevData) => ({
+  //     ...prevData,
+  //     remarks: content
+  //   }));
+  // };
+  const handleEditorChange = (content, editor) => {
+    // Get plain text instead of HTML
+    const plainText = editor.getContent({ format: 'text' });
+
+    setFormData({
+      ...formData,
+      remarks: plainText // This saves "new machinery" instead of "<p>new machinery</p>"
+    });
   };
 
-   // Apply readonly & toolbar state after mount and on toggle
-   useEffect(() => {
+  // Apply readonly & toolbar state after mount and on toggle
+  useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
 
@@ -35,7 +44,7 @@ export default function RemarksEditor({ formData, setFormData, viewMode }) {
     const header = editor.editorContainer.querySelector(".tox-editor-header");
     if (header) header.style.display = viewMode ? "none" : "block";
   }, [viewMode]);
-  
+
 
   return (
     <Editor
