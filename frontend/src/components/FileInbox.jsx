@@ -56,6 +56,12 @@ export default function FileInbox() {
   const params = new URLSearchParams(location.search);
   const selDept = params.get("department");  // Example: "FIN"
 
+  // useEffect(() => {
+  //   if (location.state?.activeTab) {
+  //     setActiveTab("created");
+  //   }
+  // }, [location.state]);
+
   useEffect(() => {
     const fetchInboxFiles = async () => {
       if (selDept) {

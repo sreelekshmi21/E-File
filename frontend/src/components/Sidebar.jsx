@@ -42,6 +42,17 @@ export default function Sidebar() {
             </NavLink>
           </li>
           <li className="nav-item">
+            <NavLink
+              to="/createfile"
+              className={({ isActive }) =>
+                `nav-link d-flex align-items-center gap-2 ${isActive ? "active-link" : ""}`
+              }
+            >
+              <i className="bi bi-file-earmark"></i>
+              Create File
+            </NavLink>
+          </li>
+          <li className="nav-item">
             {user?.user?.role_id == 1 && <NavLink
               to="/adminpanel"
               className={({ isActive }) =>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "../context/ToastContext";
 
@@ -8,18 +8,56 @@ const Signup = () => {
     password: '',
     email: "",
     department: "",
+    section: "",
     role_id: "2", // default: staff
   });
 
   const BASE_URL = import.meta.env.VITE_API_URL
 
   const [showPassword, setShowPassword] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [sections, setSections] = useState([]);
 
   // const [toast, setToast] = useState({ show: false, title: "", body: "" });
   const { showToast } = useToast();
 
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/departments`);
+      const data = await response.json();
+      setDepartments(data);
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+    }
+  };
+
+  const fetchSections = async (deptId) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/departments/${deptId}/divisions`);
+      const data = await response.json();
+      setSections(data);
+    } catch (error) {
+      console.error("Error fetching sections:", error);
+      setSections([]);
+    }
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    if (e.target.name === 'department') {
+      const selectedDept = departments.find(d => d.code === e.target.value);
+      if (selectedDept) {
+        fetchSections(selectedDept.id);
+      } else {
+        setSections([]);
+      }
+      setFormData(prev => ({ ...prev, [e.target.name]: e.target.value, section: "" }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -64,8 +102,11 @@ const Signup = () => {
           username: "",
           email: "",
           department: "",
+          section: "",
           password: "",
+          role_id: "2"
         });
+        setSections([]);
 
       } else {
         alert("Signup failed: " + data.error);
@@ -151,16 +192,38 @@ const Signup = () => {
             <label htmlFor="department" className="form-label">
               Department
             </label>
-            <input
-              type="text"
-              className="form-control"
+            <select
+              className="form-select" // Use form-select class for dropdowns in Bootstrap
               id="department"
               name="department"
-              placeholder="Enter Department"
               value={formData.department}
               onChange={handleChange}
               required
-            />
+            >
+              <option value="">Select Department</option>
+              {departments.map(dept => (
+                <option key={dept.id} value={dept.code}>{dept.code} - {dept.dept_name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="mb-3">
+            <label htmlFor="section" className="form-label">
+              Section
+            </label>
+            <select
+              className="form-select"
+              id="section"
+              name="section"
+              value={formData.section}
+              onChange={handleChange}
+              required
+              disabled={!formData.department}
+            >
+              <option value="">Select Section</option>
+              {sections.map(sec => (
+                <option key={sec.id} value={sec.code}>{sec.name}</option>
+              ))}
+            </select>
           </div>
           <div className="mb-3">
             <label className="form-label">Select Role</label>

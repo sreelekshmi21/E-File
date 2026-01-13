@@ -468,10 +468,10 @@ app.post("/signup", async (req, res) => {
 
       // Insert user
       const insertQuery =
-        "INSERT INTO signup (username, passwd, email, department, role_id) VALUES (?, ?, ?, ?, ?)";
+        "INSERT INTO signup (username, passwd, email, department, section, role_id) VALUES (?, ?, ?, ?, ?, ?)";
       db.query(
         insertQuery,
-        [username, password, email, department, role_id],
+        [username, password, email, department, req.body.section, role_id],
         (err, result) => {
           if (err) {
             console.error("Insert error:", err);
@@ -1018,7 +1018,9 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
     department,
     division,
     unit,
-    status
+    status,
+    targetUserId,
+    targetSection
   } = req.body;
 
   // const updatedDate = new Date(date_added)
@@ -1044,7 +1046,9 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
       division = ?,
       unit = ?,
       status = ?,
-      sender = ?
+      sender = ?,
+      target_user_id = ?,
+      target_section = ?
     WHERE id = ?
   `;
 
@@ -1064,6 +1068,8 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
     unit,
     status,
     sender,
+    targetUserId || null,
+    targetSection || null,
     fileId
   ];
 
@@ -1231,6 +1237,7 @@ app.get("/api/files", (req, res) => {
   const division = req.query.division;
   const unit = req.query.unit;
   const mode = req.query.mode; // ✅ 'created' or 'received'
+  const userId = req.query.userId;
 
   const isGSO = departmentId && departmentId.toUpperCase() === "OGS";
 
@@ -1265,14 +1272,14 @@ app.get("/api/files", (req, res) => {
         query += ` AND department = ?`;
         values.push(departmentId);
       } else if (mode === "received") {
-        query += ` AND receiver = ?`;
-        values.push(departmentId);
+        query += ` AND (target_user_id = ? OR (target_user_id IS NULL AND receiver = ?))`;
+        values.push(userId, departmentId);
       } else if (mode === "forwarded") {
         query += ` AND sender = ? OR file_id LIKE ?`;
         values.push(departmentId, `${departmentId}/%`);
       } else {
-        query += ` AND (department = ? OR receiver = ?)`;
-        values.push(departmentId, departmentId);
+        query += ` AND (department = ? OR (receiver = ? AND (target_user_id IS NULL OR target_user_id = ?)))`;
+        values.push(departmentId, departmentId, userId);
       }
     }
 
@@ -1300,14 +1307,14 @@ app.get("/api/files", (req, res) => {
       conditions.push(`department = ?`);
       values.push(departmentId);
     } else if (mode === "received") {
-      conditions.push(`receiver = ?`);
-      values.push(departmentId);
+      conditions.push(`(target_user_id = ? OR (target_user_id IS NULL AND receiver = ?))`);
+      values.push(userId, departmentId);
     } else if (mode === "forwarded") {
       conditions.push(`sender = ? OR file_id LIKE ?`);
       values.push(departmentId, `${departmentId}/%`);
     } else {
-      conditions.push(`(department = ? OR receiver = ?)`);
-      values.push(departmentId, departmentId);
+      conditions.push(`(department = ? OR (receiver = ? AND (target_user_id IS NULL OR target_user_id = ?)))`);
+      values.push(departmentId, departmentId, userId);
     }
   }
 
@@ -1984,7 +1991,27 @@ app.get("/api/debug-counter", async (req, res) => {
 
 app.get("/api/users", async (req, res) => {
   try {
-    const [rows] = await dbPromise.query("SELECT * FROM signup ORDER BY id ASC");
+    const { department, section } = req.query;
+    let query = "SELECT * FROM signup";
+    const values = [];
+    const conditions = [];
+
+    if (department) {
+      conditions.push("department = ?");
+      values.push(department);
+    }
+    if (section) {
+      conditions.push("section = ?");
+      values.push(section);
+    }
+
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+
+    query += " ORDER BY id ASC";
+
+    const [rows] = await dbPromise.query(query, values);
     res.status(200).json(rows);
   } catch (error) {
     console.error("Error fetching users:", error);

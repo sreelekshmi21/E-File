@@ -78,7 +78,10 @@ export default function useFileSave({
             });
 
             showToast("File created (Draft)", "", "success");
-            navigate(`/fileinbox`);
+            // navigate(`/fileinbox`);
+            navigate("/fileinbox", {
+                state: { activeTab: "created" }
+            });
 
         } catch (err) {
             console.error(err);
@@ -92,7 +95,9 @@ export default function useFileSave({
     const handleSendFile = async ({
         e,
         fileToEdit,
-        selectedReceiver
+        selectedReceiver,
+        selectedSection,
+        selectedUser
     }) => {
         e.preventDefault();
 
@@ -106,6 +111,8 @@ export default function useFileSave({
             return;
         }
 
+        console.log("Sending to:", selectedReceiver.value, selectedSection?.value, selectedUser?.value);
+
         try {
             const res = await fetch(
                 `${BASE_URL}/api/files/${fileToEdit.id}/send`,
@@ -113,7 +120,10 @@ export default function useFileSave({
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        toDepartment: selectedReceiver.value
+                        receiver: selectedReceiver.value,
+                        department: selectedReceiver.value, // Update department to receiver? Or keep original? Usually Forward changes Dept.
+                        targetSection: selectedSection?.value || null,
+                        targetUserId: selectedUser?.value || null
                     })
                 }
             );
@@ -130,7 +140,8 @@ export default function useFileSave({
                     file_id: fileToEdit.id,
                     user_id: user?.user?.id,
                     origin: user?.user?.department,
-                    forwarded_to: selectedReceiver.value
+                    forwarded_to: selectedReceiver.value,
+                    // You might want to log target section/user too if schema supports it
                 })
             });
 

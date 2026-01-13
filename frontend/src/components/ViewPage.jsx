@@ -21,6 +21,10 @@ export default function ViewPage() {
   const [departments, setDepartments] = useState([])
 
   const [selectedReceiver, setSelectedReceiver] = useState(null);
+  const [selectedSection, setSelectedSection] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [sections, setSections] = useState([]);
+  const [usersList, setUsersList] = useState([]);
 
   const [file, setFile] = useState([])
 
@@ -281,6 +285,57 @@ export default function ViewPage() {
 
   }, [fileToEdit?.id]);
 
+  // Fetch Sections (Divisions) when Department changes
+  useEffect(() => {
+    if (!selectedReceiver?.id) {
+      setSections([]);
+      setSelectedSection(null);
+      return;
+    }
+    const fetchSections = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/departments/${selectedReceiver.id}/divisions`);
+        const data = await res.json();
+        const options = data.map(sec => ({
+          value: sec.code, // or sec.name if you prefer
+          label: sec.name,
+          id: sec.id
+        }));
+        setSections(options);
+        setSelectedSection(null);
+      } catch (err) {
+        console.error("Failed to fetch sections:", err);
+        setSections([]);
+      }
+    };
+    fetchSections();
+  }, [selectedReceiver]);
+
+  // Fetch Users when Section changes
+  useEffect(() => {
+    if (!selectedSection?.value || !selectedReceiver?.value) {
+      setUsersList([]);
+      setSelectedUser(null);
+      return;
+    }
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/users?department=${selectedReceiver.value}&section=${selectedSection.value}`);
+        const data = await res.json();
+        const options = data.map(u => ({
+          value: u.id,
+          label: `${u.username} (${u.role_id === 1 ? 'Admin' : 'Staff'})`
+        }));
+        setUsersList(options);
+        setSelectedUser(null);
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+        setUsersList([]);
+      }
+    };
+    fetchUsers();
+  }, [selectedSection, selectedReceiver]);
+
 
   const toggleFolder = (department) => {
     setOpenFolder(prev =>
@@ -418,7 +473,7 @@ export default function ViewPage() {
     <>
       <div>File Matter: {fileToEdit?.remarks}</div>
       <div>{fileToEdit?.file_subject}</div>
-      <div className="attachments-box">
+      <div className="attachments-box fw-bold">
         <h4>{`${fileToEdit?.file_id} ${fileToEdit?.department} Initial Attachments`}</h4>
         <div className="attachments-container files-section">
           {documents.map((doc) => (
@@ -445,13 +500,14 @@ export default function ViewPage() {
 
               {/* 📄 File name */}
               <p className="file-name">{doc.filename}</p>
+              <p>Click the FileName to  open the file</p>
             </div>
           ))}
         </div>
         <div className="folders-section">
           <h4>{user?.user?.department}</h4>
           {Object.keys(attachments).length === 0 && (
-            <p>No attachments uploaded</p>
+            <p>No additional attachments uploaded</p>
           )}
 
           <div className="folder-container">
@@ -541,7 +597,7 @@ export default function ViewPage() {
           </div>
         </div> */}
         <div className="attachments-wrapper">
-          <label className="attachments-label">Attachments:</label>
+          <label className="attachments-label">Additional Attachments:</label>
 
           <div className="attachments-row">
             <label htmlFor="fileInput" className="btn btn-primary">
@@ -644,9 +700,11 @@ export default function ViewPage() {
         >
 
         </textarea>
-        <button className="btn btn-primary mt-3" onClick={handleSaveNote}>
-          Add Note
-        </button>
+        <div className="d-flex justify-content-center">
+          <button className="btn btn-primary mt-3 add-note-btn" onClick={handleSaveNote}>
+            Add Note
+          </button>
+        </div>
       </div></div>
       <div className="row mb-3">
         <div className="col-md-6 d-flex align-items-center gap-2 department-wrapper">
@@ -661,8 +719,30 @@ export default function ViewPage() {
           />
 
         </div>
+        <div className="col-md-3 d-flex align-items-center gap-2">
+          <label className="form-label mb-0">Section</label>
+          <Select
+            options={sections}
+            value={selectedSection}
+            onChange={setSelectedSection}
+            isSearchable={true}
+            placeholder="Select Section"
+            isDisabled={!selectedReceiver}
+          />
+        </div>
+        <div className="col-md-3 d-flex align-items-center gap-2">
+          <label className="form-label mb-0">User</label>
+          <Select
+            options={usersList}
+            value={selectedUser}
+            onChange={setSelectedUser}
+            isSearchable={true}
+            placeholder="Select User"
+            isDisabled={!selectedSection}
+          />
+        </div>
       </div>
-      {fileToEdit.status !== "APPROVED" && <div className="update-send-container">
+      {<div className="update-send-container">
         <button className="update-send-btn btn btn-primary"
           // onClick={(e) =>
           //   handleSave({
@@ -682,7 +762,9 @@ export default function ViewPage() {
             handleSendFile({
               e,
               fileToEdit,
-              selectedReceiver
+              selectedReceiver,
+              selectedSection,
+              selectedUser
             })}>
           Update & Send
         </button>
