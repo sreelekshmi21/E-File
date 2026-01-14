@@ -4,11 +4,13 @@ import { useToast } from "../context/ToastContext";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
+    fullname: "",
     username: "",
     password: '',
     email: "",
     department: "",
     section: "",
+    designation: "",
     role_id: "2", // default: staff
   });
 
@@ -99,10 +101,12 @@ const Signup = () => {
         showToast("Signup Successful!", "", "success");
 
         setFormData({
+          fullname: "",
           username: "",
           email: "",
           department: "",
           section: "",
+          designation: "",
           password: "",
           role_id: "2"
         });
@@ -122,6 +126,21 @@ const Signup = () => {
       <div className="card shadow p-4" style={{ width: "22rem" }}>
         <h3 className="text-center mb-4">SignUp Form</h3>
         <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label htmlFor="fullname" className="form-label">
+              Full Name
+            </label>
+            <input
+              type="text"
+              className="form-control"
+              id="fullname"
+              name="fullname"
+              placeholder="Enter full name"
+              value={formData.fullname}
+              onChange={handleChange}
+              required
+            />
+          </div>
           <div className="mb-3">
             <label htmlFor="username" className="form-label">
               Username
@@ -224,6 +243,21 @@ const Signup = () => {
                 <option key={sec.id} value={sec.code}>{sec.name}</option>
               ))}
             </select>
+          </div>
+          <div className="mb-3">
+            <label htmlFor="designation" className="form-label">
+              Designation
+            </label>
+            <input
+              type="text"
+              className="form-control"
+              id="designation"
+              name="designation"
+              placeholder="Enter designation"
+              value={formData.designation}
+              onChange={handleChange}
+              required
+            />
           </div>
           <div className="mb-3">
             <label className="form-label">Select Role</label>

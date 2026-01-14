@@ -673,6 +673,7 @@ export default function FileInbox() {
                       {user?.user?.role_id == 1 && <th scope="col">Action</th>}
                       <th></th>
                       <th scope="col">Document Expiry Timer</th>
+                      <th scope="col">Track</th>
                     </tr>
                   </thead>
                   <tbody id="fileTableBody">
@@ -738,6 +739,19 @@ export default function FileInbox() {
                             {/* <p className="text-gray-500 mt-2">
         (Expires at: {expiry.toLocaleTimeString()})
       </p> */}
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-info"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const url = `/filetimeline?fileId=${file?.id}&fileName=${encodeURIComponent(file?.file_id)}`;
+                                const newWin = window.open(url, '_blank');
+                                sessionStorage.setItem('timelineFile', JSON.stringify({ fileId: file?.id, fileName: file?.file_id }));
+                              }}
+                            >
+                              📍 Track
+                            </button>
                           </td>
                           {/* <td>{isNew(file.date_added) && <span className="text-blue-600 font-bold">NEW</span>}</td> */}
                         </tr>

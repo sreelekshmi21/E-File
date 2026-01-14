@@ -120,8 +120,7 @@ export default function useFileSave({
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        receiver: selectedReceiver.value,
-                        department: selectedReceiver.value, // Update department to receiver? Or keep original? Usually Forward changes Dept.
+                        toDepartment: selectedReceiver.value,
                         targetSection: selectedSection?.value || null,
                         targetUserId: selectedUser?.value || null
                     })
@@ -141,7 +140,9 @@ export default function useFileSave({
                     user_id: user?.user?.id,
                     origin: user?.user?.department,
                     forwarded_to: selectedReceiver.value,
-                    // You might want to log target section/user too if schema supports it
+                    target_section: selectedSection?.value || null,
+                    target_user_id: selectedUser?.value || null,
+                    target_username: selectedUser?.label || null
                 })
             });
 

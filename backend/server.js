@@ -445,7 +445,7 @@ app.get("/", (req, res) => {
 
 
 app.post("/signup", async (req, res) => {
-  const { username, password, email, department, role_id } = req.body;
+  const { fullname, username, password, email, department, role_id, designation } = req.body;
 
   if (!username || !password || !role_id) {
     return res.status(400).json({ message: "Missing required fields" });
@@ -468,10 +468,10 @@ app.post("/signup", async (req, res) => {
 
       // Insert user
       const insertQuery =
-        "INSERT INTO signup (username, passwd, email, department, section, role_id) VALUES (?, ?, ?, ?, ?, ?)";
+        "INSERT INTO signup (fullname, username, passwd, email, department, section, designation, role_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
       db.query(
         insertQuery,
-        [username, password, email, department, req.body.section, role_id],
+        [fullname, username, password, email, department, req.body.section, designation, role_id],
         (err, result) => {
           if (err) {
             console.error("Insert error:", err);
@@ -903,9 +903,11 @@ app.post(
     /* ==========================
        INSERT FILE (DRAFT)
     ========================== */
+    const safeFolderNameForPath = fileName.replace(/\//g, "-");
     const insertFileQuery = `
       INSERT INTO files (
         file_id,
+        file_name,
         file_subject,
         date_added,
         current_status,
@@ -917,13 +919,20 @@ app.post(
         file_no,
         receivedAt,
         expiry,
-        sender
+        sender,
+        receiver,
+        size,
+        url,
+        inwardnum,
+        outwardnum,
+        path
       )
-      VALUES (?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const fileValues = [
       file_id,
+      fileName,
       file_subject,
       date_added,
       current_status,
@@ -932,9 +941,15 @@ app.post(
       division,
       unit,
       file_no,
-      new Date().toISOString(),
-      expiry_date,
-      sender
+      date_added,  // receivedAt - use same format as date_added
+      0,  // expiry - 0 means not expired, 1 means expired
+      sender,
+      req.body.receiver || "",
+      0,  // size
+      "", // url
+      req.body.inwardnum || "",
+      req.body.outwardnum || "",
+      `uploads/${safeFolderNameForPath}` // path
     ];
 
     db.query(insertFileQuery, fileValues, (fileErr, fileResult) => {
@@ -1766,27 +1781,37 @@ app.post('/api/file-events', async (req, res) => {
     approved_by,
     viewed_by,
     edited_by,
-    commented_by
+    commented_by,
+    target_section,
+    target_user_id,
+    target_username
   } = req.body;
+
+  console.log('POST /api/file-events received:', req.body);
 
   if (!event_type || !file_id) {
     return res.status(400).json({ error: 'event_type and file_id are required' });
   }
 
   try {
+    const values = [event_type, file_id, user_id || null, origin || null, forwarded_to || null, approved_by || null, viewed_by || null, edited_by || null, commented_by || null, target_section || null, target_user_id || null, target_username || null];
+    console.log('Inserting file event with values:', values);
+
     const [result] = await dbPromise.query(
-      `INSERT INTO file_events (event_type, created_at, file_id, user_id, origin, forwarded_to, approved_by,viewed_by,edited_by, commented_by)
-       VALUES (?, NOW(), ?, ?, ?, ?, ?, ?,?, ?)`,
-      [event_type, file_id, user_id, origin, forwarded_to, approved_by, viewed_by, edited_by, commented_by]
+      `INSERT INTO file_events (event_type, created_at, file_id, user_id, origin, forwarded_to, approved_by, viewed_by, edited_by, commented_by, target_section, target_user_id, target_username)
+       VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      values
     );
 
+    console.log('File event inserted successfully, id:', result.insertId);
     res.status(201).json({
       message: 'File event logged successfully',
       event_id: result.insertId
     });
   } catch (err) {
-    console.error('Error inserting file event:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error inserting file event:', err.message);
+    console.error('Full error:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
   }
 });
 
@@ -1802,23 +1827,50 @@ app.get("/api/file-events/:fileId", (req, res) => {
   // const query = `SELECT * FROM file_events WHERE file_id = ? ORDER BY created_at DESC`;
   const query = `SELECT 
       file_events.*, 
-      signup.username 
+      signup.username,
+      signup.fullname,
+      signup.designation,
+      signup.department AS department_code,
+      departments.dept_name AS department,
+      divisions.name AS section_name,
+      target_user.fullname AS target_user_fullname,
+      target_user.designation AS target_user_designation,
+      target_dept.dept_name AS target_user_department 
     FROM 
       file_events 
-    JOIN 
+    LEFT JOIN 
       signup 
     ON 
       file_events.user_id = signup.id 
+    LEFT JOIN
+      departments
+    ON
+      signup.department = departments.code
+    LEFT JOIN
+      divisions
+    ON
+      file_events.target_section = divisions.code
+    LEFT JOIN
+      signup AS target_user
+    ON
+      file_events.target_user_id = target_user.id
+    LEFT JOIN
+      departments AS target_dept
+    ON
+      target_user.department = target_dept.code
     WHERE 
       file_events.file_id = ? 
     ORDER BY 
-      file_events.created_at DESC`
+      file_events.created_at ASC`
 
   db.query(query, [fileId], (err, results) => {
     if (err) {
       console.error("Database error:", err);
       return res.status(500).json({ error: "Database error" });
     }
+
+    console.log('File events query results for fileId', fileId, ':', results.length, 'events found');
+    console.log('Results:', JSON.stringify(results, null, 2));
 
     res.json(results);
   });
