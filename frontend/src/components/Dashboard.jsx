@@ -186,7 +186,7 @@ export default function Dashboard() {
         {/* 👉 Main Content */}
         <div className="col-md-10">
           <div className="d-flex justify-content-between align-items-center mb-4">
-            <h2 className="fw-bold" style={{ fontSize: "25px" }}>Santhigiri Foundation</h2>
+            <h2 className="fw-bold" style={{ fontSize: "25px" }}>Santhigiri Foundation.</h2>
             <h4>Logged in as {user?.user?.username} | {currentTime}</h4>
             {hasPermission('create') && (
               <button className="btn btn-primary" onClick={handleCreateFile}>
