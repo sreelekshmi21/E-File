@@ -1,0 +1,273 @@
+
+1. numbers = [1,2,3]
+   letters = ['a','b','c']
+   num_letters = numbers + letters
+   print(num_letters)
+
+2.  zeros = [0] * 5
+    print(zeros)
+
+3.  num = list(range(20))
+    print(num)
+4.     print(num[::2]
+
+
+
+
+Ans:
+    
+  1.  [1, 2, 3, 'a', 'b', 'c']
+ 2.   [0, 0, 0, 0, 0]
+  3.  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+   4.    [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+
+
+
+5,  def sum(a, b):
+       return (a + b)
+
+      a = int(input('Enter 1st number: '))
+      b = int(input('Enter 2nd number: '))
+
+     print(f'Sum of {a} and {b} is {sum(a, b)}')
+
+
+6.  def find_square(num):
+       return num * num
+            print(find_square(2))      
+7.   
+     c = int(input('Enter any number'))
+        print(find_square(c))
+
+8.   temp = 35  
+     if temp > 30:
+           print('high temp')
+     else: 
+           print('low temp')
+
+9.   weight = int(input('Enter weight'))  
+      unit = input('kg or L')
+      if unit == 'kg':
+            converted = weight/0.45
+           print('Weight in kg is '+str(converted))
+     else:
+             converted = weight * 0.45
+          print('weight in pounds is '+str(converted))
+  Ans: 
+  5. Enter 1st number: 
+       8
+     Enter 2nd number: 
+        7
+       Sum of 8 and 7 is 15
+  
+   6.  4
+  7.  25
+
+ 10.  i = 1
+   while i <= 10:
+    print(i * '*')
+    i += 1
+
+
+
+    
+*
+**
+***
+****
+*****
+******
+*******
+********
+*********
+**********
+
+
+11.   names = ['alice','bob','mary','lulu']
+     print(names)
+      print(names[2])
+      print(names[0:3])
+
+ans:    ['alice','bob','mary','lulu']
+        mary
+        ['alice','bob','mary']
+
+12.    numbers = [1,2,3,4,5]
+       numbers.append(6)
+       print(numbers)
+13.    
+       numbers.remove(2)
+       print(numbers)
+ 14.     
+        numbers.insert(0,7) //insert in first pos of list
+         print(numbers)
+
+
+Ans:     
+12.         [1, 2, 3, 4, 5, 6]
+13.        
+            [1, 3, 4, 5, 6]
+14.        
+           [7, 1, 3, 4, 5, 6]
+
+
+15.      numbers = [7,1,2,3,4,5]
+    
+         for item in numbers:
+              print(item)
+
+
+16.        numbers = [7,1,2,3,4,5]
+           i = 0
+          while i < len(numbers):
+             print(numbers[i])
+              i += 1
+    
+17.  
+      cars = ['Ford', 'BMW', 'Volvo']
+
+      cars.sort()
+
+         print(cars)
+
+ans:    [BMW,Ford,Vlovo]
+
+18. items = ["beau","Alice","Beau","Sree","Queen"]
+         items.sort(key=str.lower)
+           print(items)
+
+ans:   [Alice,beau,Beau,Queen,Sree]
+
+19.  itemsCopy = items[:]
+        items.sort(key=str.lower)
+      print(items)     --------------   [Alice,beau,Beau,Queen,Sree]
+     print(itemsCopy)   --------------["beau","Alice","Beau","Sree","Queen"]
+
+20.  map in python
+
+        numbers = [1,2,3,4,5]
+       double = lambda num: num * 2
+       double_num = map(double,numbers)  
+        print(list(double_num))
+
+ans:    [2,4,6,8,10]   
+
+21.   numbers = [1,2,3,4]
+      def double(num):
+          return num * 2
+
+      result = map(double,numbers)
+      print(list(result))
+
+ans:   [2,4,6,8]
+
+22.    FILTER in python
+
+           isEven = lambda a: a % 2 == 0
+          filter_num = filter(isEven,numbers)
+        print(list(filter_num))
+  
+      ans:  [2,4]
+
+
+23. multiply_two = lambda a,b : a * b
+    print(multiply_two(3,5))
+
+24.    res = lambda a,b: (a+b,a*b)
+       print(res(3,4))
+
+ans:  23:   15, 24: (7,12)
+
+25.  calculate_sum = lambda a: a + 1
+     print(calculate_sum(5))----------------6
+
+           calculate_division = lambda a,b: a/b
+26.        print(calculate_division(15,3))-----ans:   5
+
+
+27. REDUCE func in python
+     
+   #find product of ALL numbers in a list
+             product = reduce(lambda a,b: a * b,numbers)
+            print(product)
+
+
+ 28.    is_odd = filter(lambda a: a % 2 != 0,numbers)
+    print(list(is_odd))
+
+
+ 29. from functools import reduce
+
+      expenses = [('dinner',80),('car_repair', 180)]
+
+      sum = reduce(lambda num1,num2: num1[1] + num2[1],expenses)
+       print(sum)
+
+ans:  260
+
+
+30.  from functools import reduce
+
+      numbersList = [2,4,6,8]
+     func = lambda a,b : a + b
+    res = reduce(func,numbersList)
+       print(res)
+
+ans:   20
+
+31.  
+      tupleList = [('car',180),('bike',2000)]
+     func1 = lambda num1,num2: num1[1] + num2[1]
+        res2 = reduce(func1,tupleList)
+       print(res2)
+
+ans:  2180
+
+
+32.  multiply_two = lambda a,b : a * b
+     print(multiply_two(3,5))
+
+ans:  15
+
+
+
+33.  def get_choices():
+        player_choice = input("Enter a player choice: (rock/papr/scissors)")
+        #computer_choice = 'paper'
+        options = ['rock','paper','scissors']
+       computer_choice = random.choice(options)
+        choices = {"player": player_choice, "computer": computer_choice}
+       return choices
+
+
+  def check_win(player,computer):
+    print(f'you chose {player},computer chose {computer}')
+    if player == computer:
+        return "Is a tie"
+    elif player == 'rock': 
+        if computer == 'scissors':
+            return 'Roc smashes scissors,yoy win'
+        else:
+           return 'paper covers rock,you lose' 
+    elif player == 'paper':
+        if computer == 'rock':
+            return 'paper covers rock,win'
+        else:
+           return 'scissors cuts paper,you lose'
+    elif player == 'scissors': 
+        if computer == 'paper':
+            return 'scissors cut paper,win'
+        else:
+           return 'rock smashes scissors,you lose'       
+    else:
+        return 'NN'
+        
+        
+     choices = get_choices()
+      print(choices)
+
+        # check_win("rock","rock")
+         result = check_win(choices['player'],choices['computer'])
+          print(result)
+
+
