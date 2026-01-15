@@ -64,6 +64,17 @@ export default function Sidebar() {
             </NavLink>}
           </li>
           <li className="nav-item">
+            <a
+              href={`${import.meta.env.VITE_API_URL}/uploads/File Movement Pdf.pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-link sidebar-link"
+            >
+              <i className="bi bi-file-earmark"></i>
+              File Movement PDF
+            </a>
+          </li>
+          <li className="nav-item">
             <button
               className="nav-link btn btn-link w-100 text-start d-flex align-items-center gap-2"
               style={{
