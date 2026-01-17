@@ -193,12 +193,12 @@ export default function ViewPage() {
     });
 
     try {
-      const res = await fetch("http://localhost:5000/uploadStep2", {
+      const res = await fetch(`${BASE_URL}/uploadStep2`, {
         method: "POST",
         body: formData, // <-- MUST be inside body
         // ❌ DO NOT set Content-Type
       });
-      alert(res.status)
+      alert("File uploaded successfully")
       if (!res.ok) {
         throw new Error("Server returned " + res.status);
       }
@@ -325,6 +325,7 @@ export default function ViewPage() {
         const options = data.map(u => ({
           value: u.id,
           label: `${u.username} (${u.role_id === 1 ? 'Admin' : 'Staff'})`
+          // label: `${u.username} (${u.designation})`
         }));
         setUsersList(options);
         setSelectedUser(null);
