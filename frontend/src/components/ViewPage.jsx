@@ -324,8 +324,9 @@ export default function ViewPage() {
         const data = await res.json();
         const options = data.map(u => ({
           value: u.id,
-          label: `${u.username} (${u.role_id === 1 ? 'Admin' : 'Staff'})`
-          // label: `${u.username} (${u.designation})`
+          label: u.designation
+            ? `${u.fullname || u.username} (${u.designation})`
+            : (u.fullname || u.username)
         }));
         setUsersList(options);
         setSelectedUser(null);
