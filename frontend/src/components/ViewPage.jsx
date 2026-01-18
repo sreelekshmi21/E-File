@@ -49,24 +49,39 @@ export default function ViewPage() {
   const { showToast } = useToast();
 
   // Check if current user "owns" the file (can forward/edit it)
-  // User owns if: file is DRAFT and user's department created it, OR user's department is the current receiver
+  // User owns if: file is DRAFT and user created it, OR user is the current target recipient
   const isFileOwner = (() => {
     if (!fileToEdit || !user?.user?.department) return false;
     const userDept = user.user.department;
     const userId = user.user.id;
     const isDraft = fileToEdit.status === 'DRAFT';
 
-    // For DRAFT files, creator's department owns it
+    // For DRAFT files, only the creator can edit/forward
     if (isDraft) {
-      return fileToEdit.department === userDept;
+      // Check created_by_user_id if available, otherwise fall back to sender department
+      if (fileToEdit.created_by_user_id) {
+        return fileToEdit.created_by_user_id === userId;
+      }
+      return fileToEdit.sender === userDept;
     }
 
-    // For sent files, current receiver owns it
-    // Check if target_user_id matches (if specified) or receiver department matches
+    // For sent files, check who the file was sent TO
+    // If target_user_id is set, only that specific user can forward
     if (fileToEdit.target_user_id) {
       return fileToEdit.target_user_id === userId;
     }
-    return fileToEdit.receiver === userDept;
+
+    // If no specific user was targeted, check department match
+    // But also ensure the current user didn't just send this file
+    // (sender should not be able to forward until it comes back)
+    if (fileToEdit.receiver === userDept) {
+      // If sender matches user's department, this is a same-dept scenario
+      // The file should only be editable if it wasn't sent BY this user
+      // We don't have sender_user_id, so we allow department-level access
+      return true;
+    }
+
+    return false;
   })();
 
   console.log('attach', data)
