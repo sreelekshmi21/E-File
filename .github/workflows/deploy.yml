@@ -56,36 +56,40 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Install serve globally
+      - name: Install serve
         shell: powershell
-        run: npm install -g serve pm2
+        run: npm install -g serve
 
       - name: Stop existing processes
         shell: powershell
         run: |
-          $pm2Path = (npm root -g) + "\pm2\bin\pm2"
-          node $pm2Path delete all
+          Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force
+          Write-Host "Stopped existing node processes"
         continue-on-error: true
 
       - name: Start backend
         shell: powershell
         working-directory: backend
         run: |
-          $pm2Path = (npm root -g) + "\pm2\bin\pm2"
-          node $pm2Path start server.js --name "e-file-backend"
+          Start-Process -FilePath "node" -ArgumentList "server.js" -WindowStyle Hidden
+          Write-Host "Backend started"
 
       - name: Start frontend
         shell: powershell
         working-directory: frontend
         run: |
-          $servePath = (npm root -g) + "\serve\build\main.js"
-          $pm2Path = (npm root -g) + "\pm2\bin\pm2"
-          node $pm2Path start $servePath --name "e-file-frontend" -- -s dist -l 5173
+          Start-Process -FilePath "npx" -ArgumentList "serve", "-s", "dist", "-l", "5173" -WindowStyle Hidden
+          Write-Host "Frontend started"
 
-      - name: Verify
+      - name: Verify services
         shell: powershell
         run: |
-          $pm2Path = (npm root -g) + "\pm2\bin\pm2"
-          node $pm2Path save
-          node $pm2Path list
+          Start-Sleep -Seconds 5
+          $processes = Get-Process -Name node -ErrorAction SilentlyContinue
+          if ($processes) {
+            Write-Host "Node processes running:" -ForegroundColor Green
+            $processes | Format-Table Id, ProcessName, StartTime
+          } else {
+            Write-Host "Warning: No node processes found" -ForegroundColor Yellow
+          }
           Write-Host "Deployment complete!" -ForegroundColor Green
