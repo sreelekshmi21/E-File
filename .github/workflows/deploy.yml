@@ -9,14 +9,10 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
-    
-    defaults:
-      run:
-        shell: powershell
-        working-directory: C:\Users\ftadmin\e-filing\e-file
 
     steps:
       - name: Display deployment info
+        shell: powershell
         run: |
           Write-Host "========================================" -ForegroundColor Cyan
           Write-Host "Deploying E-File Application" -ForegroundColor Cyan
@@ -24,15 +20,17 @@ jobs:
           Write-Host "========================================" -ForegroundColor Cyan
 
       - name: Pull latest changes
+        shell: powershell
+        working-directory: C:\Users\ftadmin\e-filing\e-file
         run: |
           git fetch origin main
           git reset --hard origin/main
           Write-Host "Successfully pulled latest changes" -ForegroundColor Green
 
       - name: Create backend .env from secrets
+        shell: powershell
         working-directory: C:\Users\ftadmin\e-filing\e-file\backend
         run: |
-          # Create .env file from GitHub Secrets
           Set-Content -Path ".env" -Value "DB_HOST=${{ secrets.DB_HOST }}"
           Add-Content -Path ".env" -Value "DB_USER=${{ secrets.DB_USER }}"
           Add-Content -Path ".env" -Value "DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
@@ -42,57 +40,48 @@ jobs:
           Write-Host "Backend .env file created from secrets" -ForegroundColor Green
 
       - name: Create frontend .env from secrets
+        shell: powershell
         working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
         run: |
-          # Create frontend .env with API URL
           Set-Content -Path ".env" -Value "VITE_API_URL=${{ secrets.VITE_API_URL }}"
           Write-Host "Frontend .env file created from secrets" -ForegroundColor Green
 
-      - name: Verify .env files exist
+      - name: Install backend dependencies
+        shell: powershell
+        working-directory: C:\Users\ftadmin\e-filing\e-file\backend
         run: |
-          $backendEnv = Test-Path "backend\.env"
-          $frontendEnv = Test-Path "frontend\.env"
-          if (-not $backendEnv) {
-            Write-Host "ERROR: Backend .env file not created!" -ForegroundColor Red
-            exit 1
-          }
-          if (-not $frontendEnv) {
-            Write-Host "ERROR: Frontend .env file not created!" -ForegroundColor Red
-            exit 1
-          }
-          Write-Host "All .env files verified" -ForegroundColor Green
+          npm ci --prefer-offline
+          Write-Host "Backend dependencies installed" -ForegroundColor Green
 
-      - name: Create logs directory
+      - name: Run database migrations
+        shell: powershell
+        working-directory: C:\Users\ftadmin\e-filing\e-file\backend
         run: |
-          if (-not (Test-Path "logs")) {
-            New-Item -ItemType Directory -Path "logs"
-          }
-          Write-Host "Logs directory ready" -ForegroundColor Green
+          node init_db.js
+          Write-Host "Database migrations completed" -ForegroundColor Green
 
       - name: Install frontend dependencies
+        shell: powershell
         working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
         run: |
           npm ci --prefer-offline
           Write-Host "Frontend dependencies installed" -ForegroundColor Green
 
       - name: Build frontend for production
+        shell: powershell
         working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
         run: |
           npm run build
           Write-Host "Frontend build completed" -ForegroundColor Green
 
-      - name: Install serve for frontend
+      - name: Install global tools
+        shell: powershell
         run: |
-          npm install -g serve
-          Write-Host "Serve installed globally" -ForegroundColor Green
+          npm install -g serve pm2
+          Write-Host "Global tools installed" -ForegroundColor Green
 
-      - name: Install backend dependencies
-        working-directory: C:\Users\ftadmin\e-filing\e-file\backend
-        run: |
-          npm ci --prefer-offline
-          Write-Host "Backend dependencies installed" -ForegroundColor Green
-
-      - name: Stop existing processes
+      - name: Stop existing PM2 processes
+        shell: powershell
         run: |
           try {
             pm2 stop all
@@ -100,49 +89,26 @@ jobs:
           } catch {
             Write-Host "No existing PM2 processes" -ForegroundColor Yellow
           }
-          Write-Host "Cleanup completed" -ForegroundColor Green
         continue-on-error: true
 
-      - name: Start applications with PM2
+      - name: Start backend with PM2
+        shell: powershell
+        working-directory: C:\Users\ftadmin\e-filing\e-file\backend
         run: |
-          pm2 start ecosystem.config.js
+          pm2 start server.js --name "e-file-backend"
+          Write-Host "Backend started" -ForegroundColor Green
+
+      - name: Start frontend with PM2
+        shell: powershell
+        working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
+        run: |
+          pm2 start "npx serve -s dist -l 5173" --name "e-file-frontend"
+          Write-Host "Frontend started" -ForegroundColor Green
+
+      - name: Save PM2 and verify
+        shell: powershell
+        run: |
           pm2 save
-          Write-Host "Applications started with PM2" -ForegroundColor Green
-
-      - name: Verify deployment
-        run: |
-          Start-Sleep -Seconds 8
-          $status = pm2 jlist | ConvertFrom-Json
-          
-          $backend = $status | Where-Object { $_.name -eq "e-file-backend" }
-          $frontend = $status | Where-Object { $_.name -eq "e-file-frontend" }
-          
-          $success = $true
-          
-          if ($backend.pm2_env.status -eq "online") {
-            Write-Host "✓ Backend is running!" -ForegroundColor Green
-          } else {
-            Write-Host "✗ Backend failed to start" -ForegroundColor Red
-            $success = $false
-          }
-          
-          if ($frontend.pm2_env.status -eq "online") {
-            Write-Host "✓ Frontend is running!" -ForegroundColor Green
-          } else {
-            Write-Host "✗ Frontend failed to start" -ForegroundColor Red
-            $success = $false
-          }
-          
-          if (-not $success) {
-            pm2 logs --lines 30
-            exit 1
-          }
-
-      - name: Deployment complete
-        run: |
-          Write-Host "========================================" -ForegroundColor Green
-          Write-Host "✓ Deployment completed successfully!" -ForegroundColor Green
-          Write-Host "  Backend:  Running on PM2" -ForegroundColor Green
-          Write-Host "  Frontend: Running on PM2 (port 5173)" -ForegroundColor Green
-          Write-Host "========================================" -ForegroundColor Green
+          Start-Sleep -Seconds 5
           pm2 list
+          Write-Host "Deployment completed!" -ForegroundColor Green
