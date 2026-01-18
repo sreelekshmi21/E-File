@@ -57,28 +57,25 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Install PM2
+      - name: Stop existing processes
         shell: powershell
-        run: npm install -g pm2 serve
-
-      - name: Stop PM2
-        shell: powershell
-        run: pm2 delete all
+        run: |
+          npx pm2 delete all
         continue-on-error: true
 
       - name: Start backend
         shell: powershell
         working-directory: backend
-        run: pm2 start server.js --name "e-file-backend"
+        run: npx pm2 start server.js --name "e-file-backend"
 
       - name: Start frontend
         shell: powershell
         working-directory: frontend
-        run: pm2 start "npx serve -s dist -l 5173" --name "e-file-frontend"
+        run: npx pm2 start "npx serve -s dist -l 5173" --name "e-file-frontend"
 
       - name: Verify
         shell: powershell
         run: |
-          pm2 save
-          pm2 list
+          npx pm2 save
+          npx pm2 list
           Write-Host "Deployment complete!" -ForegroundColor Green
