@@ -62,6 +62,16 @@ async function initDB() {
             console.log("'target_section' column already exists in 'files' table.");
         }
 
+        // 2c. Check/Add 'created_by_user_id' to 'files' table to track who created the file
+        console.log("Checking 'files' table for 'created_by_user_id' column...");
+        const [createdByCol] = await connection.query("SHOW COLUMNS FROM files LIKE 'created_by_user_id'");
+        if (createdByCol.length === 0) {
+            await connection.query("ALTER TABLE files ADD COLUMN created_by_user_id INT");
+            console.log("Added 'created_by_user_id' column to 'files' table.");
+        } else {
+            console.log("'created_by_user_id' column already exists in 'files' table.");
+        }
+
         // 3. Check/Add 'Manager' role
         console.log("Checking for 'Manager' role...");
         const [roles] = await connection.query("SELECT * FROM roles WHERE name = 'Manager'");

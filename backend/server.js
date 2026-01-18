@@ -892,7 +892,8 @@ app.post(
       division,
       unit,
       file_no,
-      sender
+      sender,
+      created_by_user_id
     } = req.body;
 
     const date_added = new Date();
@@ -939,9 +940,10 @@ app.post(
         url,
         inwardnum,
         outwardnum,
-        path
+        path,
+        created_by_user_id
       )
-      VALUES (?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const fileValues = [
@@ -963,7 +965,8 @@ app.post(
       "", // url
       req.body.inwardnum || "",
       req.body.outwardnum || "",
-      `uploads/${safeFolderNameForPath}` // path
+      `uploads/${safeFolderNameForPath}`, // path
+      created_by_user_id || null  // creator's user ID
     ];
 
     db.query(insertFileQuery, fileValues, (fileErr, fileResult) => {
@@ -1267,8 +1270,14 @@ app.get("/api/files", (req, res) => {
   const unit = req.query.unit;
   const mode = req.query.mode; // ✅ 'created' or 'received'
   const userId = req.query.userId;
+  const username = req.query.username; // ✅ Get username for super-admin check
 
-  const isGSO = departmentId && departmentId.toUpperCase() === "OGS";
+  // Super-admin check: only 'gs' user can see all files, not the entire OGS department
+  const isSuperAdmin = username && username.toLowerCase() === "gs";
+
+  console.log("=== DEBUG FILES API ===");
+  console.log("mode:", mode, "| userId:", userId, "| username:", username);
+  console.log("department:", departmentId, "| isSuperAdmin:", isSuperAdmin);
 
   const executeQuery = (query, values) => {
     console.log("Final Query:", query);
@@ -1296,10 +1305,12 @@ app.get("/api/files", (req, res) => {
     const values = [...filteredStatuses];
 
     // ✅ Apply "mode" logic
-    if (!isGSO) {
+    if (!isSuperAdmin) {
       if (mode === "created") {
-        query += ` AND department = ?`;
-        values.push(departmentId);
+        // Show only files created by this user (for drafts) OR files created by this department (for sent files)
+        // Use 'sender' not 'department' - sender is where file originated, department is where it's going
+        query += ` AND (created_by_user_id = ? OR (UPPER(status) != 'DRAFT' AND sender = ?))`;
+        values.push(userId, departmentId);
       } else if (mode === "received") {
         // Exclude DRAFT files from received mode - only creator sees drafts
         query += ` AND (target_user_id = ? OR (target_user_id IS NULL AND receiver = ?)) AND UPPER(status) != 'DRAFT'`;
@@ -1333,10 +1344,12 @@ app.get("/api/files", (req, res) => {
   const conditions = [];
   const values = [];
 
-  if (!isGSO) {
+  if (!isSuperAdmin) {
     if (mode === "created") {
-      conditions.push(`department = ?`);
-      values.push(departmentId);
+      // Show only files created by this user (for drafts) OR files created by this department (for sent files)
+      // Use 'sender' not 'department' - sender is where file originated, department is where it's going
+      conditions.push(`(created_by_user_id = ? OR (UPPER(status) != 'DRAFT' AND sender = ?))`);
+      values.push(userId, departmentId);
     } else if (mode === "received") {
       // Exclude DRAFT files from received mode - only creator sees drafts
       conditions.push(`(target_user_id = ? OR (target_user_id IS NULL AND receiver = ?)) AND UPPER(status) != 'DRAFT'`);

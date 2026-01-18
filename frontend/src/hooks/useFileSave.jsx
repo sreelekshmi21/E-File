@@ -51,6 +51,7 @@ export default function useFileSave({
             formDatas.append("division", selectedDivision?.value);
             formDatas.append("unit", selectedUnit?.value);
             formDatas.append("remarks", formData?.remarks || "");
+            formDatas.append("created_by_user_id", user?.user?.id); // Track who created the file
 
             /* Attachments */
             // const files = document.getElementById("file")?.files || [];
