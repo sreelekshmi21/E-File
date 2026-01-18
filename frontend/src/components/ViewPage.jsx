@@ -48,6 +48,27 @@ export default function ViewPage() {
 
   const { showToast } = useToast();
 
+  // Check if current user "owns" the file (can forward/edit it)
+  // User owns if: file is DRAFT and user's department created it, OR user's department is the current receiver
+  const isFileOwner = (() => {
+    if (!fileToEdit || !user?.user?.department) return false;
+    const userDept = user.user.department;
+    const userId = user.user.id;
+    const isDraft = fileToEdit.status === 'DRAFT';
+
+    // For DRAFT files, creator's department owns it
+    if (isDraft) {
+      return fileToEdit.department === userDept;
+    }
+
+    // For sent files, current receiver owns it
+    // Check if target_user_id matches (if specified) or receiver department matches
+    if (fileToEdit.target_user_id) {
+      return fileToEdit.target_user_id === userId;
+    }
+    return fileToEdit.receiver === userDept;
+  })();
+
   console.log('attach', data)
 
   const getIcon = (type) => {
@@ -744,22 +765,8 @@ export default function ViewPage() {
           />
         </div>
       </div>
-      {<div className="update-send-container">
+      {isFileOwner && <div className="update-send-container">
         <button className="update-send-btn btn btn-primary"
-          // onClick={(e) =>
-          //   handleSave({
-          //     e,
-          //     mode: "send",
-          //     // formData,
-          //     fileToEdit,
-          //     selectedReceiver,
-          //     // selectedDivision,
-          //     // selectedUnit,
-          //     // approvalStatus,
-          //     // fileName,
-          //     // setFileNumber
-          //   })
-          //}
           onClick={(e) =>
             handleSendFile({
               e,
@@ -770,6 +777,9 @@ export default function ViewPage() {
             })}>
           Update & Send
         </button>
+      </div>}
+      {!isFileOwner && <div className="alert alert-info mt-3">
+        <strong>Read-only:</strong> This file is currently with another department. You can view it but cannot forward or edit.
       </div>}
       {user?.user?.role_id == 1 && <div className="d-flex justify-content-center gap-3 mt-3">
         <button

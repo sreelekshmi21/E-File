@@ -121,6 +121,7 @@ export default function useFileSave({
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         toDepartment: selectedReceiver.value,
+                        fromDepartment: user?.user?.department,
                         targetSection: selectedSection?.value || null,
                         targetUserId: selectedUser?.value || null
                     })

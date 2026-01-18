@@ -1301,10 +1301,12 @@ app.get("/api/files", (req, res) => {
         query += ` AND department = ?`;
         values.push(departmentId);
       } else if (mode === "received") {
-        query += ` AND (target_user_id = ? OR (target_user_id IS NULL AND receiver = ?))`;
+        // Exclude DRAFT files from received mode - only creator sees drafts
+        query += ` AND (target_user_id = ? OR (target_user_id IS NULL AND receiver = ?)) AND UPPER(status) != 'DRAFT'`;
         values.push(userId, departmentId);
       } else if (mode === "forwarded") {
-        query += ` AND sender = ? OR file_id LIKE ?`;
+        // Exclude DRAFT files from forwarded mode
+        query += ` AND (sender = ? OR file_id LIKE ?) AND UPPER(status) != 'DRAFT'`;
         values.push(departmentId, `${departmentId}/%`);
       } else {
         query += ` AND (department = ? OR (receiver = ? AND (target_user_id IS NULL OR target_user_id = ?)))`;
@@ -1336,10 +1338,12 @@ app.get("/api/files", (req, res) => {
       conditions.push(`department = ?`);
       values.push(departmentId);
     } else if (mode === "received") {
-      conditions.push(`(target_user_id = ? OR (target_user_id IS NULL AND receiver = ?))`);
+      // Exclude DRAFT files from received mode - only creator sees drafts
+      conditions.push(`(target_user_id = ? OR (target_user_id IS NULL AND receiver = ?)) AND UPPER(status) != 'DRAFT'`);
       values.push(userId, departmentId);
     } else if (mode === "forwarded") {
-      conditions.push(`sender = ? OR file_id LIKE ?`);
+      // Exclude DRAFT files from forwarded mode
+      conditions.push(`(sender = ? OR file_id LIKE ?) AND UPPER(status) != 'DRAFT'`);
       values.push(departmentId, `${departmentId}/%`);
     } else {
       conditions.push(`(department = ? OR (receiver = ? AND (target_user_id IS NULL OR target_user_id = ?)))`);
@@ -2765,7 +2769,7 @@ app.put("/api/files/:id/status", async (req, res) => {
 
 app.put("/api/files/:id/send", async (req, res) => {
   const { id } = req.params;
-  const { toDepartment } = req.body;
+  const { toDepartment, fromDepartment } = req.body;
 
   // from auth middleware
   // const user = req.user;  
@@ -2785,17 +2789,24 @@ app.put("/api/files/:id/send", async (req, res) => {
       return res.status(404).json({ message: "File not found" });
     }
 
-    // 2️⃣ Permission check
-    // if (file.current_department !== user.department) {
-    //   return res.status(403).json({
-    //     message: "You cannot send a file not in your department"
-    //   });
-    // }
+    // 2️⃣ Permission check - verify sender is the current receiver of the file
+    // For DRAFT files, the department must match
+    // For sent files, the receiver must match the sender's department
+    const isDraft = file.status === "DRAFT";
+    const isFileWithSender = isDraft
+      ? (file.department === fromDepartment)
+      : (file.receiver === fromDepartment);
 
-    // 3️⃣ Prevent re-sending
+    if (fromDepartment && !isFileWithSender) {
+      return res.status(403).json({
+        message: "You cannot forward a file that is not currently with your department"
+      });
+    }
+
+    // 3️⃣ Prevent re-sending - only DRAFT or pending files can be sent
     if (file.status !== "DRAFT" && file.status !== "pending") {
       return res.status(400).json({
-        message: "Only draft files can be sent"
+        message: "Only draft or pending files can be sent"
       });
     }
 
