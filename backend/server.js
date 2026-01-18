@@ -2782,7 +2782,7 @@ app.put("/api/files/:id/status", async (req, res) => {
 
 app.put("/api/files/:id/send", async (req, res) => {
   const { id } = req.params;
-  const { toDepartment, fromDepartment } = req.body;
+  const { toDepartment, fromDepartment, targetSection, targetUserId } = req.body;
 
   // from auth middleware
   // const user = req.user;  
@@ -2823,15 +2823,17 @@ app.put("/api/files/:id/send", async (req, res) => {
       });
     }
 
-    // 4️⃣ Update file routing
+    // 4️⃣ Update file routing - include target_user_id and target_section for user-level targeting
     await dbPromise.query(
       `UPDATE files
        SET department = ?,
            receiver = ?,
            sender = ?,
-           status = 'pending'
+           status = 'pending',
+           target_user_id = ?,
+           target_section = ?
        WHERE id = ?`,
-      [toDepartment, toDepartment, file?.department, id]
+      [toDepartment, toDepartment, file?.department, targetUserId || null, targetSection || null, id]
     );
 
     // 5️⃣ (Optional but recommended) Audit log
