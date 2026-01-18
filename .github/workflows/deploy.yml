@@ -1,0 +1,136 @@
+name: Deploy E-File Application
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    
+    defaults:
+      run:
+        shell: powershell
+        working-directory: C:\Users\ftadmin\e-filing\e-file
+
+    steps:
+      - name: Display deployment info
+        run: |
+          Write-Host "========================================" -ForegroundColor Cyan
+          Write-Host "Deploying E-File Application" -ForegroundColor Cyan
+          Write-Host "Timestamp: $(Get-Date)" -ForegroundColor Cyan
+          Write-Host "========================================" -ForegroundColor Cyan
+
+      - name: Pull latest changes
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+          Write-Host "Successfully pulled latest changes" -ForegroundColor Green
+
+      - name: Check for .env file
+        working-directory: C:\Users\ftadmin\e-filing\e-file\backend
+        run: |
+          if (-not (Test-Path ".env")) {
+            Write-Host "========================================" -ForegroundColor Red
+            Write-Host "ERROR: .env file not found!" -ForegroundColor Red
+            Write-Host "========================================" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "Please create the .env file on the server:" -ForegroundColor Yellow
+            Write-Host "  1. Copy backend\.env.example to backend\.env" -ForegroundColor Yellow
+            Write-Host "  2. Fill in your actual values" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "Example:" -ForegroundColor Cyan
+            Write-Host "  cd C:\Users\ftadmin\e-filing\e-file\backend" -ForegroundColor Cyan
+            Write-Host "  copy .env.example .env" -ForegroundColor Cyan
+            Write-Host "  notepad .env" -ForegroundColor Cyan
+            Write-Host ""
+            exit 1
+          }
+          Write-Host "✓ .env file found" -ForegroundColor Green
+
+      - name: Create logs directory
+        run: |
+          if (-not (Test-Path "logs")) {
+            New-Item -ItemType Directory -Path "logs"
+          }
+          Write-Host "Logs directory ready" -ForegroundColor Green
+
+      - name: Install frontend dependencies
+        working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
+        run: |
+          npm ci --prefer-offline
+          Write-Host "Frontend dependencies installed" -ForegroundColor Green
+
+      - name: Build frontend for production
+        working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
+        run: |
+          npm run build
+          Write-Host "Frontend build completed" -ForegroundColor Green
+
+      - name: Install serve for frontend
+        run: |
+          npm install -g serve
+          Write-Host "Serve installed globally" -ForegroundColor Green
+
+      - name: Install backend dependencies
+        working-directory: C:\Users\ftadmin\e-filing\e-file\backend
+        run: |
+          npm ci --prefer-offline
+          Write-Host "Backend dependencies installed" -ForegroundColor Green
+
+      - name: Stop existing processes
+        run: |
+          try {
+            pm2 stop all
+            pm2 delete all
+          } catch {
+            Write-Host "No existing PM2 processes" -ForegroundColor Yellow
+          }
+          Write-Host "Cleanup completed" -ForegroundColor Green
+        continue-on-error: true
+
+      - name: Start applications with PM2
+        run: |
+          pm2 start ecosystem.config.js
+          pm2 save
+          Write-Host "Applications started with PM2" -ForegroundColor Green
+
+      - name: Verify deployment
+        run: |
+          Start-Sleep -Seconds 8
+          $status = pm2 jlist | ConvertFrom-Json
+          
+          $backend = $status | Where-Object { $_.name -eq "e-file-backend" }
+          $frontend = $status | Where-Object { $_.name -eq "e-file-frontend" }
+          
+          $success = $true
+          
+          if ($backend.pm2_env.status -eq "online") {
+            Write-Host "✓ Backend is running!" -ForegroundColor Green
+          } else {
+            Write-Host "✗ Backend failed to start" -ForegroundColor Red
+            $success = $false
+          }
+          
+          if ($frontend.pm2_env.status -eq "online") {
+            Write-Host "✓ Frontend is running!" -ForegroundColor Green
+          } else {
+            Write-Host "✗ Frontend failed to start" -ForegroundColor Red
+            $success = $false
+          }
+          
+          if (-not $success) {
+            pm2 logs --lines 30
+            exit 1
+          }
+
+      - name: Deployment complete
+        run: |
+          Write-Host "========================================" -ForegroundColor Green
+          Write-Host "✓ Deployment completed successfully!" -ForegroundColor Green
+          Write-Host "  Backend:  Running on PM2" -ForegroundColor Green
+          Write-Host "  Frontend: Running on PM2 (port 5173)" -ForegroundColor Green
+          Write-Host "========================================" -ForegroundColor Green
+          pm2 list

@@ -62,6 +62,13 @@ export default function FileInbox() {
   //   }
   // }, [location.state]);
 
+  // Set active tab from navigation state (e.g., after file creation)
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+  }, [location.state]);
+
   useEffect(() => {
     const fetchInboxFiles = async () => {
       if (selDept) {
