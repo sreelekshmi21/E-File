@@ -104,6 +104,7 @@ export default function FileInbox() {
       if (status) params.append('status', status);
       if (mode) params.append('mode', mode);
       if (user?.user?.id) params.append('userId', user.user.id);
+      if (user?.user?.username) params.append('username', user.user.username); // For super-admin check
 
       const response = await fetch(`${BASE_URL}/api/files?${params.toString()}`);
       const data = await response.json();
