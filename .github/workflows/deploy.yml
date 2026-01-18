@@ -4,32 +4,25 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # Allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: self-hosted
 
     steps:
-      - name: Display deployment info
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Display info
         shell: powershell
         run: |
-          Write-Host "========================================" -ForegroundColor Cyan
           Write-Host "Deploying E-File Application" -ForegroundColor Cyan
-          Write-Host "Timestamp: $(Get-Date)" -ForegroundColor Cyan
-          Write-Host "========================================" -ForegroundColor Cyan
+          Write-Host "Path: $PWD" -ForegroundColor Cyan
 
-      - name: Pull latest changes
+      - name: Create backend .env
         shell: powershell
-        working-directory: C:\Users\ftadmin\e-filing\e-file
-        run: |
-          git fetch origin main
-          git reset --hard origin/main
-          Write-Host "Successfully pulled latest changes" -ForegroundColor Green
-
-      - name: Create backend .env from secrets
-        shell: powershell
-        working-directory: C:\Users\ftadmin\e-filing\e-file\backend
+        working-directory: backend
         run: |
           Set-Content -Path ".env" -Value "DB_HOST=${{ secrets.DB_HOST }}"
           Add-Content -Path ".env" -Value "DB_USER=${{ secrets.DB_USER }}"
@@ -37,78 +30,55 @@ jobs:
           Add-Content -Path ".env" -Value "DB_NAME=${{ secrets.DB_NAME }}"
           Add-Content -Path ".env" -Value "JWT_SECRET=${{ secrets.JWT_SECRET }}"
           Add-Content -Path ".env" -Value "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}"
-          Write-Host "Backend .env file created from secrets" -ForegroundColor Green
 
-      - name: Create frontend .env from secrets
+      - name: Create frontend .env
         shell: powershell
-        working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
+        working-directory: frontend
         run: |
           Set-Content -Path ".env" -Value "VITE_API_URL=${{ secrets.VITE_API_URL }}"
-          Write-Host "Frontend .env file created from secrets" -ForegroundColor Green
 
-      - name: Install backend dependencies
+      - name: Install backend deps
         shell: powershell
-        working-directory: C:\Users\ftadmin\e-filing\e-file\backend
-        run: |
-          npm ci --prefer-offline
-          Write-Host "Backend dependencies installed" -ForegroundColor Green
+        working-directory: backend
+        run: npm ci
 
-      - name: Run database migrations
+      - name: Run DB migrations
         shell: powershell
-        working-directory: C:\Users\ftadmin\e-filing\e-file\backend
-        run: |
-          node init_db.js
-          Write-Host "Database migrations completed" -ForegroundColor Green
+        working-directory: backend
+        run: node init_db.js
 
-      - name: Install frontend dependencies
+      - name: Install frontend deps
         shell: powershell
-        working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
-        run: |
-          npm ci --prefer-offline
-          Write-Host "Frontend dependencies installed" -ForegroundColor Green
+        working-directory: frontend
+        run: npm ci
 
-      - name: Build frontend for production
+      - name: Build frontend
         shell: powershell
-        working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
-        run: |
-          npm run build
-          Write-Host "Frontend build completed" -ForegroundColor Green
+        working-directory: frontend
+        run: npm run build
 
-      - name: Install global tools
+      - name: Install PM2
         shell: powershell
-        run: |
-          npm install -g serve pm2
-          Write-Host "Global tools installed" -ForegroundColor Green
+        run: npm install -g pm2 serve
 
-      - name: Stop existing PM2 processes
+      - name: Stop PM2
         shell: powershell
-        run: |
-          try {
-            pm2 stop all
-            pm2 delete all
-          } catch {
-            Write-Host "No existing PM2 processes" -ForegroundColor Yellow
-          }
+        run: pm2 delete all
         continue-on-error: true
 
-      - name: Start backend with PM2
+      - name: Start backend
         shell: powershell
-        working-directory: C:\Users\ftadmin\e-filing\e-file\backend
-        run: |
-          pm2 start server.js --name "e-file-backend"
-          Write-Host "Backend started" -ForegroundColor Green
+        working-directory: backend
+        run: pm2 start server.js --name "e-file-backend"
 
-      - name: Start frontend with PM2
+      - name: Start frontend
         shell: powershell
-        working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
-        run: |
-          pm2 start "npx serve -s dist -l 5173" --name "e-file-frontend"
-          Write-Host "Frontend started" -ForegroundColor Green
+        working-directory: frontend
+        run: pm2 start "npx serve -s dist -l 5173" --name "e-file-frontend"
 
-      - name: Save PM2 and verify
+      - name: Verify
         shell: powershell
         run: |
           pm2 save
-          Start-Sleep -Seconds 5
           pm2 list
-          Write-Host "Deployment completed!" -ForegroundColor Green
+          Write-Host "Deployment complete!" -ForegroundColor Green
