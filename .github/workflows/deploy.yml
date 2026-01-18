@@ -29,26 +29,38 @@ jobs:
           git reset --hard origin/main
           Write-Host "Successfully pulled latest changes" -ForegroundColor Green
 
-      - name: Check for .env file
+      - name: Create backend .env from secrets
         working-directory: C:\Users\ftadmin\e-filing\e-file\backend
         run: |
-          if (-not (Test-Path ".env")) {
-            Write-Host "========================================" -ForegroundColor Red
-            Write-Host "ERROR: .env file not found!" -ForegroundColor Red
-            Write-Host "========================================" -ForegroundColor Red
-            Write-Host ""
-            Write-Host "Please create the .env file on the server:" -ForegroundColor Yellow
-            Write-Host "  1. Copy backend\.env.example to backend\.env" -ForegroundColor Yellow
-            Write-Host "  2. Fill in your actual values" -ForegroundColor Yellow
-            Write-Host ""
-            Write-Host "Example:" -ForegroundColor Cyan
-            Write-Host "  cd C:\Users\ftadmin\e-filing\e-file\backend" -ForegroundColor Cyan
-            Write-Host "  copy .env.example .env" -ForegroundColor Cyan
-            Write-Host "  notepad .env" -ForegroundColor Cyan
-            Write-Host ""
+          # Create .env file from GitHub Secrets
+          Set-Content -Path ".env" -Value "DB_HOST=${{ secrets.DB_HOST }}"
+          Add-Content -Path ".env" -Value "DB_USER=${{ secrets.DB_USER }}"
+          Add-Content -Path ".env" -Value "DB_PASSWORD=${{ secrets.DB_PASSWORD }}"
+          Add-Content -Path ".env" -Value "DB_NAME=${{ secrets.DB_NAME }}"
+          Add-Content -Path ".env" -Value "JWT_SECRET=${{ secrets.JWT_SECRET }}"
+          Add-Content -Path ".env" -Value "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}"
+          Write-Host "Backend .env file created from secrets" -ForegroundColor Green
+
+      - name: Create frontend .env from secrets
+        working-directory: C:\Users\ftadmin\e-filing\e-file\frontend
+        run: |
+          # Create frontend .env with API URL
+          Set-Content -Path ".env" -Value "VITE_API_URL=${{ secrets.VITE_API_URL }}"
+          Write-Host "Frontend .env file created from secrets" -ForegroundColor Green
+
+      - name: Verify .env files exist
+        run: |
+          $backendEnv = Test-Path "backend\.env"
+          $frontendEnv = Test-Path "frontend\.env"
+          if (-not $backendEnv) {
+            Write-Host "ERROR: Backend .env file not created!" -ForegroundColor Red
             exit 1
           }
-          Write-Host "✓ .env file found" -ForegroundColor Green
+          if (-not $frontendEnv) {
+            Write-Host "ERROR: Frontend .env file not created!" -ForegroundColor Red
+            exit 1
+          }
+          Write-Host "All .env files verified" -ForegroundColor Green
 
       - name: Create logs directory
         run: |
