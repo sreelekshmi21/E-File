@@ -1316,9 +1316,10 @@ app.get("/api/files", (req, res) => {
         query += ` AND (target_user_id = ? OR (target_user_id IS NULL AND receiver = ?)) AND UPPER(status) != 'DRAFT'`;
         values.push(userId, departmentId);
       } else if (mode === "forwarded") {
-        // Exclude DRAFT files from forwarded mode
-        query += ` AND (sender = ? OR file_id LIKE ?) AND UPPER(status) != 'DRAFT'`;
-        values.push(departmentId, `${departmentId}/%`);
+        // Show only files that THIS USER has forwarded (sent/forwarded events)
+        // Use file_events table to find files where the current user performed a 'sent' or 'forwarded' action
+        query += ` AND id IN (SELECT DISTINCT file_id FROM file_events WHERE user_id = ? AND event_type IN ('sent', 'forwarded')) AND UPPER(status) != 'DRAFT'`;
+        values.push(userId);
       } else {
         query += ` AND (department = ? OR (receiver = ? AND (target_user_id IS NULL OR target_user_id = ?)))`;
         values.push(departmentId, departmentId, userId);
@@ -1355,9 +1356,10 @@ app.get("/api/files", (req, res) => {
       conditions.push(`(target_user_id = ? OR (target_user_id IS NULL AND receiver = ?)) AND UPPER(status) != 'DRAFT'`);
       values.push(userId, departmentId);
     } else if (mode === "forwarded") {
-      // Exclude DRAFT files from forwarded mode
-      conditions.push(`(sender = ? OR file_id LIKE ?) AND UPPER(status) != 'DRAFT'`);
-      values.push(departmentId, `${departmentId}/%`);
+      // Show only files that THIS USER has forwarded (sent/forwarded events)
+      // Use file_events table to find files where the current user performed a 'sent' or 'forwarded' action
+      conditions.push(`id IN (SELECT DISTINCT file_id FROM file_events WHERE user_id = ? AND event_type IN ('sent', 'forwarded')) AND UPPER(status) != 'DRAFT'`);
+      values.push(userId);
     } else {
       conditions.push(`(department = ? OR (receiver = ? AND (target_user_id IS NULL OR target_user_id = ?)))`);
       values.push(departmentId, departmentId, userId);
