@@ -19,10 +19,11 @@ import HighPriorityList from './components/HighPriorityList'
 import useIdleTimer from './utils/dbProvider'
 import FileCount from './components/FileCount'
 import ViewPage from './components/ViewPage'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
 
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const handleIdle = () => {
     // Clear local storage/session storage tokens
@@ -34,32 +35,32 @@ function App() {
   useIdleTimer(handleIdle, 20 * 60 * 1000); // 20 minutes
 
   const AppRoutes = () => {
-  const routes = useRoutes([
-    { path: "/", element: <Login /> },
-    { path: "/signup", element: <Signup /> },
-    { path: "/dashboard", element: <Dashboard /> },
-    { path: "/createfile", element: <CreateFile /> },
-    { path: "/fileinbox", element: <FileInbox /> },
-    { path: "/filetimeline", element: <FileTimeline /> },
-    { path: "/adminpanel", element: <AdminPanel /> },
-    { path: "/users", element: <UsersList /> },
-    { path: "/roles", element: <Roles /> },
-    { path: "/redlist", element: <RedList /> },
-    { path: "/highpriority", element: <HighPriorityList /> },
-    { path: "/filecount", element: <FileCount /> },
-     { path: "/viewpage", element: <ViewPage /> },
-  ]);
-  return routes;
-};
+    const routes = useRoutes([
+      { path: "/", element: <Login /> },
+      { path: "/signup", element: <Signup /> },
+      { path: "/dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
+      { path: "/createfile", element: <ProtectedRoute><CreateFile /></ProtectedRoute> },
+      { path: "/fileinbox", element: <ProtectedRoute><FileInbox /></ProtectedRoute> },
+      { path: "/filetimeline", element: <ProtectedRoute><FileTimeline /></ProtectedRoute> },
+      { path: "/adminpanel", element: <ProtectedRoute><AdminPanel /></ProtectedRoute> },
+      { path: "/users", element: <ProtectedRoute><UsersList /></ProtectedRoute> },
+      { path: "/roles", element: <ProtectedRoute><Roles /></ProtectedRoute> },
+      { path: "/redlist", element: <ProtectedRoute><RedList /></ProtectedRoute> },
+      { path: "/highpriority", element: <ProtectedRoute><HighPriorityList /></ProtectedRoute> },
+      { path: "/filecount", element: <ProtectedRoute><FileCount /></ProtectedRoute> },
+      { path: "/viewpage", element: <ProtectedRoute><ViewPage /></ProtectedRoute> },
+    ]);
+    return routes;
+  };
 
   return (
     <>
       {/* <BrowserRouter> */}
       <div className="app-root">
-      <AppRoutes />
+        <AppRoutes />
       </div>
-       
-    {/* </BrowserRouter>        */}
+
+      {/* </BrowserRouter>        */}
     </>
   )
 }
