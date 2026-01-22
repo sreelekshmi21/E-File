@@ -1301,7 +1301,14 @@ app.get("/api/files", (req, res) => {
       return res.status(400).json({ error: "Invalid status value" });
     }
 
-    let query = `SELECT * FROM files WHERE LOWER(status) IN (${filteredStatuses.map(() => '?').join(', ')})`;
+    let query = `SELECT files.*, 
+      receiver_user.fullname AS receiver_fullname,
+      receiver_user.designation AS receiver_designation,
+      receiver_dept.dept_name AS receiver_department
+      FROM files 
+      LEFT JOIN signup AS receiver_user ON files.target_user_id = receiver_user.id
+      LEFT JOIN departments AS receiver_dept ON receiver_user.department = receiver_dept.code
+      WHERE LOWER(files.status) IN (${filteredStatuses.map(() => '?').join(', ')})`;
     const values = [...filteredStatuses];
 
     // ✅ Apply "mode" logic
@@ -1309,39 +1316,45 @@ app.get("/api/files", (req, res) => {
       if (mode === "created") {
         // Show only files created by this user (for drafts) OR files created by this department (for sent files)
         // Use 'sender' not 'department' - sender is where file originated, department is where it's going
-        query += ` AND (created_by_user_id = ? OR (UPPER(status) != 'DRAFT' AND sender = ?))`;
+        query += ` AND (files.created_by_user_id = ? OR (UPPER(files.status) != 'DRAFT' AND files.sender = ?))`;
         values.push(userId, departmentId);
       } else if (mode === "received") {
         // Exclude DRAFT files from received mode - only creator sees drafts
-        query += ` AND (target_user_id = ? OR (target_user_id IS NULL AND receiver = ?)) AND UPPER(status) != 'DRAFT'`;
+        query += ` AND (files.target_user_id = ? OR (files.target_user_id IS NULL AND files.receiver = ?)) AND UPPER(files.status) != 'DRAFT'`;
         values.push(userId, departmentId);
       } else if (mode === "forwarded") {
         // Show only files that THIS USER has forwarded (sent/forwarded events)
         // Use file_events table to find files where the current user performed a 'sent' or 'forwarded' action
-        query += ` AND id IN (SELECT DISTINCT file_id FROM file_events WHERE user_id = ? AND event_type IN ('sent', 'forwarded')) AND UPPER(status) != 'DRAFT'`;
+        query += ` AND files.id IN (SELECT DISTINCT file_id FROM file_events WHERE user_id = ? AND event_type IN ('sent', 'forwarded')) AND UPPER(files.status) != 'DRAFT'`;
         values.push(userId);
       } else {
-        query += ` AND (department = ? OR (receiver = ? AND (target_user_id IS NULL OR target_user_id = ?)))`;
+        query += ` AND (files.department = ? OR (files.receiver = ? AND (files.target_user_id IS NULL OR files.target_user_id = ?)))`;
         values.push(departmentId, departmentId, userId);
       }
     }
 
     if (division) {
-      query += ` AND division = ?`;
+      query += ` AND files.division = ?`;
       values.push(division);
     }
 
     if (unit) {
-      query += ` AND unit = ?`;
+      query += ` AND files.unit = ?`;
       values.push(unit);
     }
 
-    query += ` ORDER BY date_added DESC`;
+    query += ` ORDER BY files.date_added DESC`;
     return executeQuery(query, values);
   }
 
   // ✅ NO STATUS FILTER CASE
-  let query = `SELECT * FROM files`;
+  let query = `SELECT files.*, 
+    receiver_user.fullname AS receiver_fullname,
+    receiver_user.designation AS receiver_designation,
+    receiver_dept.dept_name AS receiver_department
+    FROM files 
+    LEFT JOIN signup AS receiver_user ON files.target_user_id = receiver_user.id
+    LEFT JOIN departments AS receiver_dept ON receiver_user.department = receiver_dept.code`;
   const conditions = [];
   const values = [];
 
@@ -1349,30 +1362,30 @@ app.get("/api/files", (req, res) => {
     if (mode === "created") {
       // Show only files created by this user (for drafts) OR files created by this department (for sent files)
       // Use 'sender' not 'department' - sender is where file originated, department is where it's going
-      conditions.push(`(created_by_user_id = ? OR (UPPER(status) != 'DRAFT' AND sender = ?))`);
+      conditions.push(`(files.created_by_user_id = ? OR (UPPER(files.status) != 'DRAFT' AND files.sender = ?))`);
       values.push(userId, departmentId);
     } else if (mode === "received") {
       // Exclude DRAFT files from received mode - only creator sees drafts
-      conditions.push(`(target_user_id = ? OR (target_user_id IS NULL AND receiver = ?)) AND UPPER(status) != 'DRAFT'`);
+      conditions.push(`(files.target_user_id = ? OR (files.target_user_id IS NULL AND files.receiver = ?)) AND UPPER(files.status) != 'DRAFT'`);
       values.push(userId, departmentId);
     } else if (mode === "forwarded") {
       // Show only files that THIS USER has forwarded (sent/forwarded events)
       // Use file_events table to find files where the current user performed a 'sent' or 'forwarded' action
-      conditions.push(`id IN (SELECT DISTINCT file_id FROM file_events WHERE user_id = ? AND event_type IN ('sent', 'forwarded')) AND UPPER(status) != 'DRAFT'`);
+      conditions.push(`files.id IN (SELECT DISTINCT file_id FROM file_events WHERE user_id = ? AND event_type IN ('sent', 'forwarded')) AND UPPER(files.status) != 'DRAFT'`);
       values.push(userId);
     } else {
-      conditions.push(`(department = ? OR (receiver = ? AND (target_user_id IS NULL OR target_user_id = ?)))`);
+      conditions.push(`(files.department = ? OR (files.receiver = ? AND (files.target_user_id IS NULL OR files.target_user_id = ?)))`);
       values.push(departmentId, departmentId, userId);
     }
   }
 
   if (division) {
-    conditions.push(`division = ?`);
+    conditions.push(`files.division = ?`);
     values.push(division);
   }
 
   if (unit) {
-    conditions.push(`unit = ?`);
+    conditions.push(`files.unit = ?`);
     values.push(unit);
   }
 
@@ -1380,7 +1393,7 @@ app.get("/api/files", (req, res) => {
     query += ` WHERE ` + conditions.join(" AND ");
   }
 
-  query += ` ORDER BY date_added DESC`;
+  query += ` ORDER BY files.date_added DESC`;
   return executeQuery(query, values);
 });
 
