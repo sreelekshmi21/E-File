@@ -1314,10 +1314,9 @@ app.get("/api/files", (req, res) => {
     // ✅ Apply "mode" logic
     if (!isSuperAdmin) {
       if (mode === "created") {
-        // Show only files created by this user (for drafts) OR files created by this department (for sent files)
-        // Use 'sender' not 'department' - sender is where file originated, department is where it's going
-        query += ` AND (files.created_by_user_id = ? OR (UPPER(files.status) != 'DRAFT' AND files.sender = ?))`;
-        values.push(userId, departmentId);
+        // Show only files created by this specific user
+        query += ` AND files.created_by_user_id = ?`;
+        values.push(userId);
       } else if (mode === "received") {
         // Exclude DRAFT files from received mode - only creator sees drafts
         query += ` AND (files.target_user_id = ? OR (files.target_user_id IS NULL AND files.receiver = ?)) AND UPPER(files.status) != 'DRAFT'`;
@@ -1360,10 +1359,9 @@ app.get("/api/files", (req, res) => {
 
   if (!isSuperAdmin) {
     if (mode === "created") {
-      // Show only files created by this user (for drafts) OR files created by this department (for sent files)
-      // Use 'sender' not 'department' - sender is where file originated, department is where it's going
-      conditions.push(`(files.created_by_user_id = ? OR (UPPER(files.status) != 'DRAFT' AND files.sender = ?))`);
-      values.push(userId, departmentId);
+      // Show only files created by this specific user
+      conditions.push(`files.created_by_user_id = ?`);
+      values.push(userId);
     } else if (mode === "received") {
       // Exclude DRAFT files from received mode - only creator sees drafts
       conditions.push(`(files.target_user_id = ? OR (files.target_user_id IS NULL AND files.receiver = ?)) AND UPPER(files.status) != 'DRAFT'`);
