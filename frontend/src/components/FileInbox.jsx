@@ -713,7 +713,17 @@ export default function FileInbox() {
                           </td>
                           {/* <td>{file.inwardnum}</td> */}
                           {/* <td>{file.outwardnum}</td> */}
-                          <td>{file?.receiver}</td>
+                          <td>
+                            {file?.receiver_fullname ? (
+                              <div>
+                                <strong>{file.receiver_fullname}</strong>
+                                {file.receiver_designation && <div style={{ fontSize: '0.85em', color: '#666' }}>{file.receiver_designation}</div>}
+                                {file.receiver_department && <div style={{ fontSize: '0.8em', color: '#888' }}>{file.receiver_department}</div>}
+                              </div>
+                            ) : (
+                              file?.receiver || '-'
+                            )}
+                          </td>
                           {/* <td>{file?.remarks}</td> */}
                           <td>
                             <span className={`badge ${badgeClass}`}>
