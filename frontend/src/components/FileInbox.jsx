@@ -753,7 +753,7 @@ export default function FileInbox() {
                           </td>
                           <td>
                             {/* This document will expire in <DocumentExpiryCountdown expiryDate={expiry} /> */}
-                            <BatteryTimer totalTimeMs={3 * 24 * 60 * 60 * 1000} file={file} />
+                            <BatteryTimer totalTimeMs={15 * 24 * 60 * 60 * 1000} file={file} />
                             {/* <p className="text-gray-500 mt-2">
         (Expires at: {expiry.toLocaleTimeString()})
       </p> */}
