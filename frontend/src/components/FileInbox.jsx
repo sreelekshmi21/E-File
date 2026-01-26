@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import MobileHeader from './MobileHeader';
 import { getAttachments, hasPermission } from '../utils/dbProvider';
 import Select from 'react-select';
 import { useAuth } from '../context/AuthContext';
@@ -49,6 +50,9 @@ export default function FileInbox() {
   const [showNewFilesAlert, setShowNewFilesAlert] = useState(false);
   const latestReceivedAtRef = useRef(0);
   const suppressNextAlertRef = useRef(false);
+
+  // Mobile sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigate = useNavigate()
 
@@ -492,10 +496,13 @@ export default function FileInbox() {
 
   return (
     <>
+      {/* Mobile Header */}
+      <MobileHeader onMenuToggle={() => setSidebarOpen(true)} />
+
       <div className="container-fluid mt-5">
         <div className="row">
 
-          <Sidebar />
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
           <div className="col-md-10">
             <div className="card shadow-lg">

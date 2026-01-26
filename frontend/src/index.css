@@ -486,6 +486,36 @@ h4 {
   font-size: 14px;
 }
 
+/* ODF Document Preview Styles */
+.odf-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 8px;
+  height: 100%;
+}
+
+.odf-preview small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #555;
+}
+
+.odf-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 6px;
+  height: 100%;
+}
+
 .preview-box {
   height: 130px;
   background: #f5f5f5;
@@ -572,4 +602,303 @@ h4 {
 .add-note-btn {
   width: 200px;
   /* adjust as needed */
+}
+
+/* ========================================
+   MOBILE RESPONSIVE STYLES
+   ======================================== */
+
+/* Mobile Header with Hamburger Menu */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #0d6efd;
+  color: white;
+  z-index: 1030;
+  padding: 0 16px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-header .hamburger-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-header .app-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.mobile-header .header-spacer {
+  width: 40px;
+}
+
+/* Mobile Sidebar Overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+}
+
+.sidebar-overlay.active {
+  display: block;
+}
+
+/* Mobile Sidebar Styles */
+.sidebar-mobile {
+  position: fixed;
+  top: 0;
+  left: -280px;
+  width: 280px;
+  height: 100vh;
+  background: #f8f9fa;
+  z-index: 1050;
+  transition: left 0.3s ease;
+  overflow-y: auto;
+  padding-top: 16px;
+  border-right: 1px solid #dee2e6;
+}
+
+.sidebar-mobile.open {
+  left: 0;
+}
+
+.sidebar-mobile .close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+/* ========================================
+   MOBILE MEDIA QUERIES (< 768px)
+   ======================================== */
+@media (max-width: 767.98px) {
+
+  /* Show mobile header */
+  .mobile-header {
+    display: flex;
+  }
+
+  /* Add top padding to account for fixed header */
+  .app-root {
+    padding-top: 56px;
+  }
+
+  /* Hide desktop sidebar */
+  .sidebar.d-none.d-md-block {
+    display: none !important;
+  }
+
+  /* Reduce container margins on mobile */
+  .container-fluid.mt-5 {
+    margin-top: 1rem !important;
+  }
+
+  .container-fluid.my-4 {
+    margin-top: 0.75rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Make main content full width on mobile */
+  .col-md-10,
+  .col-12.col-md-10 {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Dashboard header stack on mobile */
+  .d-flex.justify-content-between.align-items-center.mb-4 {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .d-flex.justify-content-between.align-items-center.mb-4 h2,
+  .d-flex.justify-content-between.align-items-center.mb-4 h4 {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  /* Dashboard cards - 2 per row on mobile */
+  .col-sm-6.col-md-4.col-lg-3 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+
+  /* Card body text smaller on mobile */
+  .card-body .display-6 {
+    font-size: 1.75rem;
+  }
+
+  .card-body h6.card-title {
+    font-size: 0.75rem;
+  }
+
+  /* File table horizontal scroll */
+  .card-body .table-responsive,
+  .card-body {
+    overflow-x: auto;
+  }
+
+  .table {
+    min-width: 800px;
+  }
+
+  /* Filter row stack on mobile */
+  .row.g-2.align-items-end {
+    flex-direction: column;
+  }
+
+  .row.g-2.align-items-end .col-md-3 {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 8px;
+  }
+
+  /* Tab buttons wrap on mobile */
+  .d-flex.mb-3 {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .d-flex.mb-3 .btn {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+
+  /* Card header stack on mobile */
+  .card-header.d-flex.justify-content-between {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .card-header .form-control.w-25 {
+    width: 100% !important;
+  }
+
+  /* Attachments grid - fewer columns on mobile */
+  .attachments-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  /* Admin panel flex layout fix */
+  .d-flex>.sidebar {
+    display: none !important;
+  }
+
+  .d-flex>.flex-grow-1 {
+    width: 100%;
+  }
+
+  /* Admin panel cards single column on small mobile */
+  .col-12.col-sm-6.col-md-4.col-lg-3 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+
+  /* ViewPage container padding */
+  .attachments-box {
+    padding: 10px;
+    height: auto;
+    max-height: 400px;
+  }
+
+  .attachments-box h4 {
+    font-size: 1rem;
+  }
+
+  /* Notes section */
+  .col-md-12.bg-light.border.p-4 {
+    padding: 12px !important;
+  }
+
+  /* Form controls */
+  select,
+  .form-control,
+  .form-select {
+    font-size: 16px;
+    /* Prevents iOS zoom on focus */
+  }
+
+  /* Battery timer smaller on mobile */
+  .battery {
+    width: 120px;
+    height: 12px;
+  }
+
+  .battery-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  /* Login card responsive */
+  .card.shadow.p-4 {
+    width: 90% !important;
+    max-width: 22rem;
+  }
+
+  /* Hide user info text on mobile (keep minimal) */
+  .card-header h4 {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+  }
+}
+
+/* Extra small devices (< 576px) */
+@media (max-width: 575.98px) {
+
+  /* Dashboard cards - full width on very small screens */
+  .col-sm-6.col-md-4.col-lg-3,
+  .col-12.col-sm-6.col-md-4.col-lg-3 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  /* Attachments single column on very small screens */
+  .attachments-container {
+    grid-template-columns: 1fr;
+  }
+
+  /* Even smaller font sizes */
+  .d-flex.justify-content-between.align-items-center.mb-4 h2 {
+    font-size: 0.9rem;
+  }
+
+  /* Tab buttons smaller */
+  .d-flex.mb-3 .btn {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
 }

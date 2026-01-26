@@ -1,0 +1,32 @@
+/* Custom CSS to hide ViewerJS toolbar and branding for embedded thumbnail previews */
+
+/* Hide the title bar at top */
+#titlebar {
+    display: none !important;
+}
+
+/* Hide the toolbar at bottom */
+#toolbarContainer {
+    display: none !important;
+}
+
+/* Make canvas container take full height when toolbars are hidden */
+#canvasContainer {
+    top: 0 !important;
+    bottom: 0 !important;
+}
+
+/* Hide dialog overlay (about box) */
+#dialogOverlay {
+    display: none !important;
+}
+
+/* Hide overlay navigator arrows */
+#overlayNavigator {
+    display: none !important;
+}
+
+/* Hide close button */
+#overlayCloseButton {
+    display: none !important;
+}

@@ -1,9 +1,8 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import { useEffect } from 'react';
+import MobileHeader from './MobileHeader';
 import { useAuth } from '../context/AuthContext';
-import { useState } from 'react';
 import Profile from './Profile';
 import { hasPermission } from '../utils/dbProvider';
 import { useCurrentTime } from '../hooks/useCurrentTime';
@@ -24,6 +23,9 @@ export default function Dashboard() {
 
   const [totalFiles, setTotalFiles] = useState([]);
   const [todayFiles, setTodayFiles] = useState([]);
+
+  // Mobile sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleCreateFile = () => {
     // You can open a modal or navigate to a create file page
@@ -177,89 +179,94 @@ export default function Dashboard() {
     //     <Profile user={user}/>
     //   </div>
     // </div>
-    <div className="container-fluid my-4">
-      <div className="row">
+    <>
+      {/* Mobile Header */}
+      <MobileHeader onMenuToggle={() => setSidebarOpen(true)} />
 
-        {/* 👉 Sidebar */}
-        <Sidebar />
+      <div className="container-fluid my-4">
+        <div className="row">
 
-        {/* 👉 Main Content */}
-        <div className="col-md-10">
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <h2 className="fw-bold" style={{ fontSize: "25px" }}>Santhigiri Foundation.</h2>
-            <h4>Logged in as {user?.user?.username} | {currentTime}</h4>
-            {hasPermission('create') && (
-              <button className="btn btn-primary" onClick={handleCreateFile}>
-                <i className="bi bi-plus-circle me-2"></i>
-                Create File
-              </button>
-            )}
+          {/* 👉 Sidebar */}
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+          {/* 👉 Main Content */}
+          <div className="col-12 col-md-10">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <h2 className="fw-bold" style={{ fontSize: "25px" }}>Santhigiri Foundation.</h2>
+              <h4>Logged in as {user?.user?.username} | {currentTime}</h4>
+              {hasPermission('create') && (
+                <button className="btn btn-primary" onClick={handleCreateFile}>
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Create File
+                </button>
+              )}
+            </div>
+
+            {/* 👉 Dashboard Cards */}
+            <div className="row g-4">
+
+              {/* Total Files */}
+              <div className="col-sm-6 col-md-4 col-lg-3">
+                <div className="card text-white bg-primary shadow-lg border-0">
+                  <div className="card-body text-center">
+                    <i className="bi bi-folder2-open display-5 mb-2"></i>
+                    <h6 className="card-title mt-2">Total Files</h6>
+                    <p className="display-6 fw-bold mb-0">{totalFiles?.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Approved Files */}
+              <div className="col-sm-6 col-md-4 col-lg-3">
+                <div className="card text-white bg-success shadow-lg border-0">
+                  <div className="card-body text-center">
+                    <i className="bi bi-check-circle display-5 mb-2"></i>
+                    <h6 className="card-title mt-2">Approved Files</h6>
+                    <p className="display-6 fw-bold mb-0">{approvedFiles?.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pending Files */}
+              <div className="col-sm-6 col-md-4 col-lg-3">
+                <div className="card text-dark bg-warning shadow-lg border-0">
+                  <div className="card-body text-center">
+                    <i className="bi bi-hourglass-split display-5 mb-2"></i>
+                    <h6 className="card-title mt-2">Pending Files</h6>
+                    <p className="display-6 fw-bold mb-0">{pendingFiles?.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Files Received Today */}
+              <div className="col-sm-6 col-md-4 col-lg-3">
+                <div className="card text-white bg-secondary shadow-lg border-0">
+                  <div className="card-body text-center">
+                    <i className="bi bi-calendar-check display-5 mb-2"></i>
+                    <h6 className="card-title mt-2">Files Received Today</h6>
+                    <p className="display-6 fw-bold mb-0">{todayFiles?.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rejected Files */}
+              <div className="col-sm-6 col-md-4 col-lg-3">
+                <div className="card text-white bg-danger shadow-lg border-0">
+                  <div className="card-body text-center">
+                    <i className="bi bi-x-circle display-5 mb-2"></i>
+                    <h6 className="card-title mt-2">Rejected Files</h6>
+                    <p className="display-6 fw-bold mb-0">{rejectedFiles?.length}</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          {/* 👉 Dashboard Cards */}
-          <div className="row g-4">
-
-            {/* Total Files */}
-            <div className="col-sm-6 col-md-4 col-lg-3">
-              <div className="card text-white bg-primary shadow-lg border-0">
-                <div className="card-body text-center">
-                  <i className="bi bi-folder2-open display-5 mb-2"></i>
-                  <h6 className="card-title mt-2">Total Files</h6>
-                  <p className="display-6 fw-bold mb-0">{totalFiles?.length}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Approved Files */}
-            <div className="col-sm-6 col-md-4 col-lg-3">
-              <div className="card text-white bg-success shadow-lg border-0">
-                <div className="card-body text-center">
-                  <i className="bi bi-check-circle display-5 mb-2"></i>
-                  <h6 className="card-title mt-2">Approved Files</h6>
-                  <p className="display-6 fw-bold mb-0">{approvedFiles?.length}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Pending Files */}
-            <div className="col-sm-6 col-md-4 col-lg-3">
-              <div className="card text-dark bg-warning shadow-lg border-0">
-                <div className="card-body text-center">
-                  <i className="bi bi-hourglass-split display-5 mb-2"></i>
-                  <h6 className="card-title mt-2">Pending Files</h6>
-                  <p className="display-6 fw-bold mb-0">{pendingFiles?.length}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Files Received Today */}
-            <div className="col-sm-6 col-md-4 col-lg-3">
-              <div className="card text-white bg-secondary shadow-lg border-0">
-                <div className="card-body text-center">
-                  <i className="bi bi-calendar-check display-5 mb-2"></i>
-                  <h6 className="card-title mt-2">Files Received Today</h6>
-                  <p className="display-6 fw-bold mb-0">{todayFiles?.length}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Rejected Files */}
-            <div className="col-sm-6 col-md-4 col-lg-3">
-              <div className="card text-white bg-danger shadow-lg border-0">
-                <div className="card-body text-center">
-                  <i className="bi bi-x-circle display-5 mb-2"></i>
-                  <h6 className="card-title mt-2">Rejected Files</h6>
-                  <p className="display-6 fw-bold mb-0">{rejectedFiles?.length}</p>
-                </div>
-              </div>
-            </div>
-
-          </div>
+          {/* 👉 Profile Sidebar */}
+          {/* <Profile user={user} /> */}
         </div>
-
-        {/* 👉 Profile Sidebar */}
-        {/* <Profile user={user} /> */}
       </div>
-    </div>
+    </>
   )
 }

@@ -48,6 +48,8 @@ export default function ViewPage() {
 
   const { showToast } = useToast();
 
+  // Mobile sidebar state - removed for ViewPage as it doesn't use sidebar
+
   // Check if current user "owns" the file (can forward/edit it)
   // User owns if: file is DRAFT and user created it, OR user is the current target recipient
   const isFileOwner = (() => {
@@ -392,6 +394,26 @@ export default function ViewPage() {
     return imageExtensions.includes(extension);
   };
 
+  // Check if file is an ODF (OpenDocument Format) file
+  const isOdfFile = (fileName) => {
+    const odfExtensions = ['odt', 'ods', 'odg', 'odp'];
+    const extension = fileName.split('.').pop().toLowerCase();
+    return odfExtensions.includes(extension);
+  };
+
+  // Get file extension
+  const getFileExtension = (fileName) => {
+    return fileName.split('.').pop().toLowerCase();
+  };
+
+  // Generate ViewerJS URL for ODF files
+  const getViewerJsUrl = (fileUrl) => {
+    // ViewerJS expects the file path relative to ViewerJS folder
+    // Format: /ViewerJS/#../../uploads/path/to/file.odt
+    const encodedPath = encodeURIComponent(fileUrl);
+    return `${BASE_URL}/ViewerJS/#${fileUrl.replace(BASE_URL, '..')}`;
+  };
+
 
   const { handleSendFile } = useFileSave({
     BASE_URL,
@@ -418,6 +440,27 @@ export default function ViewPage() {
         <iframe
           src={`${url}#page=1`}
           title="PDF Preview"
+        />
+      );
+    }
+
+    // ODF files - show embedded preview using ViewerJS iframe
+    if (["odt", "ods", "odg", "odp"].includes(ext)) {
+      // Construct ViewerJS URL for the file
+      // The path needs to be relative from ViewerJS folder
+      const relativePath = url.replace(BASE_URL, '..');
+      const viewerUrl = `${BASE_URL}/ViewerJS/#${relativePath}`;
+
+      return (
+        <iframe
+          src={viewerUrl}
+          title="ODF Preview"
+          style={{
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            pointerEvents: 'none' // Disable interaction in thumbnail, will open in new tab on click
+          }}
         />
       );
     }
@@ -509,101 +552,117 @@ export default function ViewPage() {
 
   return (
     <>
-      <div>File Matter: {fileToEdit?.remarks}</div>
-      <div>{fileToEdit?.file_subject}</div>
-      <div className="attachments-box fw-bold">
-        <h4>{`${fileToEdit?.file_id} ${fileToEdit?.department} Initial Attachments`}</h4>
-        <div className="attachments-container files-section">
-          {documents.map((doc) => (
-            <div
-              key={doc.id}
-              className="attachment-item"
-              onClick={() => {
-                const fileUrl = doc.path.startsWith("blob:")
-                  ? doc.path
-                  : `${BASE_URL}/${doc.path}`;
-                window.open(fileUrl, "_blank");
-              }}
-              title={doc.filename}
-            >
-              {/* 🔍 Preview */}
-              <div className="preview-box">
-                {renderThumbnail(
-                  doc.path.startsWith("blob:")
-                    ? doc.path
-                    : `${BASE_URL}/${doc.path}`,
-                  doc.path
-                )}
-              </div>
+      <div className="container-fluid mt-4">
+        <div className="row">
+          <div className="col-12">
+            <div>File Matter: <span dangerouslySetInnerHTML={{ __html: fileToEdit?.remarks || '' }} /></div>
+            <div>{fileToEdit?.file_subject}</div>
+            <div className="attachments-box fw-bold">
+              <h4>{`${fileToEdit?.file_id} ${fileToEdit?.department} Initial Attachments`}</h4>
+              <div className="attachments-container files-section">
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="attachment-item"
+                    onClick={() => {
+                      const fileUrl = doc.path.startsWith("blob:")
+                        ? doc.path
+                        : `${BASE_URL}/${doc.path}`;
 
-              {/* 📄 File name */}
-              <p className="file-name">{doc.filename}</p>
-              <p>Click the FileName to  open the file</p>
-            </div>
-          ))}
-        </div>
-        <div className="folders-section">
-          <h4>{user?.user?.department}</h4>
-          {Object.keys(attachments).length === 0 && (
-            <p>No additional attachments uploaded</p>
-          )}
+                      // For ODF files, use ViewerJS
+                      if (isOdfFile(doc.filename || doc.path)) {
+                        const viewerUrl = `${BASE_URL}/ViewerJS/#../${doc.path}`;
+                        window.open(viewerUrl, "_blank");
+                      } else {
+                        window.open(fileUrl, "_blank");
+                      }
+                    }}
+                    title={doc.filename}
+                  >
+                    {/* 🔍 Preview */}
+                    <div className="preview-box">
+                      {renderThumbnail(
+                        doc.path.startsWith("blob:")
+                          ? doc.path
+                          : `${BASE_URL}/${doc.path}`,
+                        doc.path
+                      )}
+                    </div>
 
-          <div className="folder-container">
-            {Object.entries(attachments).map(([department, files]) => (
-              <div key={department} className="folder">
-                <h4 onClick={() => toggleFolder(department)}
-                  style={{ cursor: "pointer" }}>📁 {department}</h4>
-
-                {/* Show files ONLY if folder is open */}
-                {openFolder === department && (
-                  <div className="folder-files">
-                    {files.map((file, index) => (<>
-                      {/* const isImage = isImageFile(file.file_name); */}
-                      <a key={index}
-
-                        href={`${BASE_URL}${file.file_path}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="file-card"
-                      >
-                        {/* <div className="file-icon">📄</div>
-                        <div className="file-name">{file.file_name}</div> */}
-
-                        <div className="file-preview-container">
-                          {isImageFile(file.file_name) ? (
-                            <img
-                              src={`${BASE_URL}${file.file_path}`}
-                              alt={file.file_name}
-                              className="file-thumbnail"
-                              style={{ width: '100%', height: '100px', objectFit: 'cover' }}
-                            />
-                          ) : (
-                            <div className="file-icon" style={{ fontSize: '2rem' }}>📄</div>
-                          )}
-                        </div>
-                        <div className="file-name">{file.file_name}</div>
-                        {/* {isImageFile(file.file_name) ? (
-                          <img
-                            src={fileUrl}
-                            alt={file.file_name}
-                            className="file-thumbnail"
-                          />
-                        ) : (
-                          <div className="file-icon">📄</div>
-                        )}
-
-                        <div className="file-name">{file.file_name}</div> */}
-
-                      </a>
-                    </>
-                    ))}
+                    {/* 📄 File name */}
+                    <p className="file-name">{doc.filename}</p>
+                    <p>Click the FileName to  open the file</p>
                   </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+              <div className="folders-section">
+                <h4>{user?.user?.department}</h4>
+                {Object.keys(attachments).length === 0 && (
+                  <p>No additional attachments uploaded</p>
+                )}
+
+                <div className="folder-container">
+                  {Object.entries(attachments).map(([department, files]) => (
+                    <div key={department} className="folder">
+                      <h4 onClick={() => toggleFolder(department)}
+                        style={{ cursor: "pointer" }}>📁 {department}</h4>
+
+                      {/* Show files ONLY if folder is open */}
+                      {openFolder === department && (
+                        <div className="folder-files">
+                          {files.map((file, index) => {
+                            const fileUrl = `${BASE_URL}${file.file_path}`;
+                            const isOdf = isOdfFile(file.file_name);
+                            const viewerUrl = isOdf ? `${BASE_URL}/ViewerJS/#..${file.file_path}` : fileUrl;
+
+                            return (
+                              <a
+                                key={index}
+                                href={isOdf ? undefined : viewerUrl}
+                                onClick={(e) => {
+                                  if (isOdf) {
+                                    e.preventDefault();
+                                    window.open(viewerUrl, "_blank");
+                                  }
+                                }}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="file-card"
+                              >
+                                <div className="file-preview-container">
+                                  {isImageFile(file.file_name) ? (
+                                    <img
+                                      src={fileUrl}
+                                      alt={file.file_name}
+                                      className="file-thumbnail"
+                                      style={{ width: '100%', height: '100px', objectFit: 'cover' }}
+                                    />
+                                  ) : isOdf ? (
+                                    <iframe
+                                      src={viewerUrl}
+                                      title="ODF Preview"
+                                      style={{
+                                        width: '100%',
+                                        height: '100px',
+                                        border: 'none',
+                                        pointerEvents: 'none'
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="file-icon" style={{ fontSize: '2rem' }}>📄</div>
+                                  )}
+                                </div>
+                                <div className="file-name">{file.file_name}</div>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
 
 
@@ -612,10 +671,10 @@ export default function ViewPage() {
 
 
 
-      {/* Upload Section Below */}
+            {/* Upload Section Below */}
 
-      <div className="col-md-12">
-        {/* <h4>Attachments:</h4>
+            <div className="col-md-12">
+              {/* <h4>Attachments:</h4>
         <div className="input-group">
           <label htmlFor="file" className="btn btn-primary">
             Choose Files
@@ -634,199 +693,202 @@ export default function ViewPage() {
               : "No files selected"}
           </div>
         </div> */}
-        <div className="attachments-wrapper">
-          <label className="attachments-label">Additional Attachments:</label>
+              <div className="attachments-wrapper">
+                <label className="attachments-label">Additional Attachments:</label>
 
-          <div className="attachments-row">
-            <label htmlFor="fileInput" className="btn btn-primary">
-              Choose Files
-            </label>
+                <div className="attachments-row">
+                  <label htmlFor="fileInput" className="btn btn-primary">
+                    Choose Files
+                  </label>
 
-            <input
-              type="file"
-              id="fileInput"
-              multiple
-              hidden
-              onChange={handleFileChange}
-            />
+                  <input
+                    type="file"
+                    id="fileInput"
+                    multiple
+                    hidden
+                    onChange={handleFileChange}
+                  />
 
-            {file.map((file, index) => (
-              <div key={index} className="file-chip">
-                <span className="file-name" title={file.name}>
-                  {file.name}
-                </span>
-                <button
-                  type="button"
-                  className="file-remove"
-                  onClick={() => removeFile(index)}
+                  {file.map((file, index) => (
+                    <div key={index} className="file-chip">
+                      <span className="file-name" title={file.name}>
+                        {file.name}
+                      </span>
+                      <button
+                        type="button"
+                        className="file-remove"
+                        onClick={() => removeFile(index)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="upload-btn-wrapper"><button className="btn btn-primary" onClick={handleUpload}>UPLOAD</button></div>
+            <div className="col-md-12 bg-light border p-4"><div className="row mb-3">
+              <h3>Notes</h3>
+              {notes.map(note => (
+                <div key={note?.id} className="note-block">
+                  {/* {console.log('note', note)} */}
+                  <p style={{ whiteSpace: 'pre-wrap' }}>{(() => {
+                    const text = note?.note || '';
+                    const parts = text.split(/(\[\[.*?\|.*?\]\])/g);
+                    return parts.map((part, index) => {
+                      const match = part.match(/^\[\[(.*?)\|(.*?)\]\]$/);
+                      if (match) {
+                        const [_, name, url] = match;
+                        return (
+                          <a
+                            key={index}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#007bff', fontWeight: 'bold', textDecoration: 'underline', cursor: 'pointer' }}
+                            title={`Open ${name}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            📎 {name}
+                          </a>
+                        );
+                      }
+                      return part;
+                    });
+                  })()}</p>
+                  <small>
+                    — <strong>{note?.username}</strong>, {note?.department} {new Date(note?.created_at).toLocaleString()}
+                  </small>
+                </div>
+              ))}
+
+              <div className="mb-2">
+                <label className="form-label">Tag a File:</label>
+                <select
+                  className="form-select"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const [name, url] = e.target.value.split('|||');
+                      setNote(prev => prev + ` [[${name}|${url}]] `);
+                      e.target.value = ''; // Reset selection
+                    }
+                  }}
                 >
-                  ✕
+                  <option value="">-- Select a file to tag --</option>
+                  {documents.map((doc, i) => {
+                    const url = doc.path.startsWith("blob:") ? doc.path : `${BASE_URL}/${doc.path}`;
+                    return <option key={`doc-${i}`} value={`${doc.filename}|||${url}`}>{doc.filename} (Initial)</option>
+                  })}
+                  {Object.entries(attachments).map(([dept, files]) =>
+                    files.map((f, i) => (
+                      <option key={`att-${dept}-${i}`} value={`${f.file_name}|||${BASE_URL}${f.file_path}`}>
+                        {f.file_name} ({dept})
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <textarea name="note" id="note" className="form-control"
+                rows="5"
+                value={note}
+                onChange={handleChangeNote}
+              // disabled={viewMode}
+              >
+
+              </textarea>
+              <div className="d-flex justify-content-center">
+                <button className="btn btn-primary mt-3 add-note-btn" onClick={handleSaveNote}>
+                  Add Note
                 </button>
               </div>
-            ))}
+            </div></div>
+            <div className="row mb-3">
+              <div className="col-md-6 d-flex align-items-center gap-2 department-wrapper">
+                <label className="form-label mb-0" htmlFor="department">Department</label>
+                <Select
+                  options={departments}
+                  value={selectedReceiver}
+                  onChange={(selectedOption) => setSelectedReceiver(selectedOption)}
+                  isSearchable={true}
+                  placeholder="Search or Select Department"
+                // isDisabled={viewMode}
+                />
+
+              </div>
+              <div className="col-md-3 d-flex align-items-center gap-2">
+                <label className="form-label mb-0">Section</label>
+                <Select
+                  options={sections}
+                  value={selectedSection}
+                  onChange={setSelectedSection}
+                  isSearchable={true}
+                  placeholder="Select Section"
+                  isDisabled={!selectedReceiver}
+                />
+              </div>
+              <div className="col-md-3 d-flex align-items-center gap-2">
+                <label className="form-label mb-0">User</label>
+                <Select
+                  options={usersList}
+                  value={selectedUser}
+                  onChange={setSelectedUser}
+                  isSearchable={true}
+                  placeholder="Select User"
+                  isDisabled={!selectedSection}
+                />
+              </div>
+            </div>
+            {isFileOwner && <div className="update-send-container">
+              <button className="update-send-btn btn btn-primary"
+                onClick={(e) =>
+                  handleSendFile({
+                    e,
+                    fileToEdit,
+                    selectedReceiver,
+                    selectedSection,
+                    selectedUser
+                  })}>
+                Update & Send
+              </button>
+            </div>}
+            {!isFileOwner && <div className="alert alert-info mt-3">
+              <strong>Read-only:</strong> This file is currently with another department. You can view it but cannot forward or edit.
+            </div>}
+            {user?.user?.role_id == 1 && <div className="d-flex justify-content-center gap-3 mt-3">
+              <button
+                className="btn btn-success d-flex align-items-center gap-2"
+                onClick={() => updateFileStatus(fileToEdit?.id, "APPROVED")}>
+                <i className="bi bi-check-circle"></i>
+                Approve
+              </button>
+
+              <button
+                className="btn btn-danger d-flex align-items-center gap-2"
+                onClick={() => updateFileStatus(fileToEdit?.id, "REJECTED")}>
+                <i className="bi bi-x-circle"></i>
+                Reject
+              </button>
+            </div>}
+            <div className="container d-flex justify-content-between">
+              <div style={{ marginTop: "20px" }}><button
+                className="btn btn-warning px-5"
+                onClick={handleHighPriority}>Request High Priority</button></div>
+              <div className="ms-auto">
+                <button
+                  className="btn btn-secondary px-5"
+                  onClick={() => handleTimeline(fileToEdit)}
+                >
+                  File Timeline
+                </button>
+              </div>
+              <div>
+                <button className="btn btn-secondary px-5" onClick={handleCancel}>
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div className="upload-btn-wrapper"><button className="btn btn-primary" onClick={handleUpload}>UPLOAD</button></div>
-      <div className="col-md-12 bg-light border p-4"><div className="row mb-3">
-        <h3>Notes</h3>
-        {notes.map(note => (
-          <div key={note?.id} className="note-block">
-            {/* {console.log('note', note)} */}
-            <p style={{ whiteSpace: 'pre-wrap' }}>{(() => {
-              const text = note?.note || '';
-              const parts = text.split(/(\[\[.*?\|.*?\]\])/g);
-              return parts.map((part, index) => {
-                const match = part.match(/^\[\[(.*?)\|(.*?)\]\]$/);
-                if (match) {
-                  const [_, name, url] = match;
-                  return (
-                    <a
-                      key={index}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: '#007bff', fontWeight: 'bold', textDecoration: 'underline', cursor: 'pointer' }}
-                      title={`Open ${name}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      📎 {name}
-                    </a>
-                  );
-                }
-                return part;
-              });
-            })()}</p>
-            <small>
-              — <strong>{note?.username}</strong>, {note?.department} {new Date(note?.created_at).toLocaleString()}
-            </small>
-          </div>
-        ))}
-
-        <div className="mb-2">
-          <label className="form-label">Tag a File:</label>
-          <select
-            className="form-select"
-            onChange={(e) => {
-              if (e.target.value) {
-                const [name, url] = e.target.value.split('|||');
-                setNote(prev => prev + ` [[${name}|${url}]] `);
-                e.target.value = ''; // Reset selection
-              }
-            }}
-          >
-            <option value="">-- Select a file to tag --</option>
-            {documents.map((doc, i) => {
-              const url = doc.path.startsWith("blob:") ? doc.path : `${BASE_URL}/${doc.path}`;
-              return <option key={`doc-${i}`} value={`${doc.filename}|||${url}`}>{doc.filename} (Initial)</option>
-            })}
-            {Object.entries(attachments).map(([dept, files]) =>
-              files.map((f, i) => (
-                <option key={`att-${dept}-${i}`} value={`${f.file_name}|||${BASE_URL}${f.file_path}`}>
-                  {f.file_name} ({dept})
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-
-        <textarea name="note" id="note" className="form-control"
-          rows="5"
-          value={note}
-          onChange={handleChangeNote}
-        // disabled={viewMode}
-        >
-
-        </textarea>
-        <div className="d-flex justify-content-center">
-          <button className="btn btn-primary mt-3 add-note-btn" onClick={handleSaveNote}>
-            Add Note
-          </button>
-        </div>
-      </div></div>
-      <div className="row mb-3">
-        <div className="col-md-6 d-flex align-items-center gap-2 department-wrapper">
-          <label className="form-label mb-0" htmlFor="department">Department</label>
-          <Select
-            options={departments}
-            value={selectedReceiver}
-            onChange={(selectedOption) => setSelectedReceiver(selectedOption)}
-            isSearchable={true}
-            placeholder="Search or Select Department"
-          // isDisabled={viewMode}
-          />
-
-        </div>
-        <div className="col-md-3 d-flex align-items-center gap-2">
-          <label className="form-label mb-0">Section</label>
-          <Select
-            options={sections}
-            value={selectedSection}
-            onChange={setSelectedSection}
-            isSearchable={true}
-            placeholder="Select Section"
-            isDisabled={!selectedReceiver}
-          />
-        </div>
-        <div className="col-md-3 d-flex align-items-center gap-2">
-          <label className="form-label mb-0">User</label>
-          <Select
-            options={usersList}
-            value={selectedUser}
-            onChange={setSelectedUser}
-            isSearchable={true}
-            placeholder="Select User"
-            isDisabled={!selectedSection}
-          />
-        </div>
-      </div>
-      {isFileOwner && <div className="update-send-container">
-        <button className="update-send-btn btn btn-primary"
-          onClick={(e) =>
-            handleSendFile({
-              e,
-              fileToEdit,
-              selectedReceiver,
-              selectedSection,
-              selectedUser
-            })}>
-          Update & Send
-        </button>
-      </div>}
-      {!isFileOwner && <div className="alert alert-info mt-3">
-        <strong>Read-only:</strong> This file is currently with another department. You can view it but cannot forward or edit.
-      </div>}
-      {user?.user?.role_id == 1 && <div className="d-flex justify-content-center gap-3 mt-3">
-        <button
-          className="btn btn-success d-flex align-items-center gap-2"
-          onClick={() => updateFileStatus(fileToEdit?.id, "APPROVED")}>
-          <i className="bi bi-check-circle"></i>
-          Approve
-        </button>
-
-        <button
-          className="btn btn-danger d-flex align-items-center gap-2"
-          onClick={() => updateFileStatus(fileToEdit?.id, "REJECTED")}>
-          <i className="bi bi-x-circle"></i>
-          Reject
-        </button>
-      </div>}
-      <div className="container d-flex justify-content-between">
-        <div style={{ marginTop: "20px" }}><button
-          className="btn btn-warning px-5"
-          onClick={handleHighPriority}>Request High Priority</button></div>
-        <div className="ms-auto">
-          <button
-            className="btn btn-secondary px-5"
-            onClick={() => handleTimeline(fileToEdit)}
-          >
-            File Timeline
-          </button>
-        </div>
-        <div>
-          <button className="btn btn-secondary px-5" onClick={handleCancel}>
-            Cancel
-          </button>
         </div>
       </div>
       {showModal && <ReusableModal
@@ -839,6 +901,5 @@ export default function ViewPage() {
         onConfirm={() => confirmHighPriority(fileToEdit?.id)} />}
     </>
   );
-
-
 }
+

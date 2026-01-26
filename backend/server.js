@@ -100,6 +100,9 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 //app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
+// Serve ViewerJS for ODF file preview (.odt, .ods, .odg files)
+app.use('/ViewerJS', express.static(path.join(__dirname, 'public', 'viewerjs-0.5.8', 'ViewerJS')));
+
 const caPath = path.join(__dirname, "certs", "ca.pem");
 // MySQL Connection
 const db = mysql.createConnection({

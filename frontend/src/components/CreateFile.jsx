@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import DocumentEditor from './DocumentEditor';
 import { useToast } from '../context/ToastContext';
 import Sidebar from './Sidebar';
+import MobileHeader from './MobileHeader';
 import { getAttachments, hasPermission } from '../utils/dbProvider';
 import { useAuth } from '../context/AuthContext';
 import Select from 'react-select';
@@ -48,6 +49,9 @@ export default function CreateFile() {
   const [approvalStatus, setApprovalStatus] = useState('pending');
 
   const [attachments, setAttachments] = useState([])
+
+  // Mobile sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     id: null,
@@ -967,9 +971,12 @@ export default function CreateFile() {
 
   return (
     <>
+      {/* Mobile Header */}
+      <MobileHeader onMenuToggle={() => setSidebarOpen(true)} />
+
       <div className="container-fluid mt-4">
         <div className="row">
-          <Sidebar />
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           {/* Left Column - Form */}
           {/* <div className="col-md-5 bg-light border p-4"><div className="row mb-3">
             <label>Notes</label>
