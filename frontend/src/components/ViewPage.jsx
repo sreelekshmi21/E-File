@@ -358,7 +358,7 @@ export default function ViewPage() {
     }
     const fetchUsers = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/api/users?department=${selectedReceiver.value}&section=${selectedSection.value}`);
+        const res = await fetch(`${BASE_URL}/api/users?department=${encodeURIComponent(selectedReceiver.value)}&section=${encodeURIComponent(selectedSection.value)}`);
         const data = await res.json();
         const options = data.map(u => ({
           value: u.id,

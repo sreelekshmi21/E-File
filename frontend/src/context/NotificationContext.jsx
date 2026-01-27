@@ -22,7 +22,7 @@ export function NotificationProvider({ children }) {
     const fetchAndNotify = async () => {
       try {
         const BASE_URL = import.meta.env.VITE_API_URL;
-        const response = await fetch(`${BASE_URL}/api/files?department=${userDept}`);
+        const response = await fetch(`${BASE_URL}/api/files?department=${encodeURIComponent(userDept)}`);
         if (!response.ok) {
           console.error('Notification polling fetch failed with status:', response.status);
           return;
