@@ -1,4 +1,5 @@
 import React from 'react'
+import NotificationBell from './NotificationBell';
 
 export default function MobileHeader({ onMenuToggle }) {
     return (
@@ -11,7 +12,9 @@ export default function MobileHeader({ onMenuToggle }) {
                 <i className="bi bi-list"></i>
             </button>
             <h1 className="app-title">E-File</h1>
-            <div className="header-spacer"></div>
+            <div className="header-spacer" style={{ display: 'flex', alignItems: 'center' }}>
+                <NotificationBell />
+            </div>
         </div>
     )
 }

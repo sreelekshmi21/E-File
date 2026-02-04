@@ -22,7 +22,12 @@ export default function CreateFile() {
 
   const [showModal, setShowModal] = useState(false);
 
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
+
+  // Check if user is Inward Desk role ONLY - shows simplified upload-only interface
+  // Users with multiple roles (e.g., INWARD + DESK) should see full file creation UI
+  const isInwardDesk = hasRole('INWARD') && !hasRole('DESK');
+
   const [note, setNote] = useState('');
 
   const [notes, setNotes] = useState([])
@@ -40,7 +45,24 @@ export default function CreateFile() {
   const [divisions, setDivisions] = useState([]);
 
   const [units, setUnits] = useState([]);
+
+  // Debug: Track units state changes
+  useEffect(() => {
+    console.log('🔴 UNITS STATE CHANGED:', units.length, 'units', units);
+  }, [units]);
+
   const [selectedDivision, setSelectedDivision] = useState('');
+
+  // Ref to track latest selectedDivision for use in handlers (bypasses closure issues)
+  const selectedDivisionRef = React.useRef(selectedDivision);
+  // COMMENTED OUT: This useEffect was overwriting the ref with stale state
+  // The ref is now ONLY set directly in handleDivisionChange
+  // useEffect(() => {
+  //   console.log('🔵 selectedDivision STATE changed to:', selectedDivision);
+  //   console.log('🔵 Before update, ref was:', selectedDivisionRef.current);
+  //   selectedDivisionRef.current = selectedDivision;
+  //   console.log('🔵 After update, ref is now:', selectedDivisionRef.current);
+  // }, [selectedDivision]);
 
   const [selectedUnit, setSelectedUnit] = useState('');
 
@@ -153,7 +175,9 @@ export default function CreateFile() {
     checkApproval(fileToEdit?.id);
 
     // Fetch preview of next file number for new files (not when editing)
-    if (!fileToEdit?.id) {
+    // Also fetch for DESK users with pending files since they are creating a new file from received attachments
+    const isDeskWithPending = hasRole('DESK') && fileToEdit?.status === 'pending';
+    if (!fileToEdit?.id || isDeskWithPending) {
       const fetchNextFileNumber = async () => {
         try {
           const response = await fetch(`${BASE_URL}/api/next-file-number`);
@@ -166,7 +190,7 @@ export default function CreateFile() {
 
       fetchNextFileNumber();
     }
-  }, [fileToEdit?.id]);
+  }, [fileToEdit?.id, fileToEdit?.status, user]);
 
 
 
@@ -206,18 +230,21 @@ export default function CreateFile() {
   };
 
   const generateFileName = () => {
-    if (selectedDepartment?.value && selectedDivision?.value && selectedUnit?.value && fileNumber) {
+    // For DESK users with pending files, use the REF instead of state
+    const isDeskWithPending = hasRole('DESK') && fileToEdit?.status === 'pending';
+    const divisionValue = isDeskWithPending ? selectedDivisionRef.current?.value : selectedDivision?.value;
+
+    if (selectedDepartment?.value && divisionValue && selectedUnit?.value && fileNumber) {
       const dt = new Date().getFullYear()
-      const generatedName = `${selectedDepartment?.value}/${selectedDivision?.value}/${selectedUnit?.value}/${fileNumber}/${dt}`;
+      const generatedName = `${selectedDepartment?.value}/${divisionValue}/${selectedUnit?.value}/${fileNumber}/${dt}`;
       setFileName(generatedName);
       return generatedName;
     }
-    return '';
+    return fileName || ''; // Return existing fileName if can't generate new one
   };
 
   const { handleCreateFile, handleSendFile } = useFileSave({
     BASE_URL,
-    user,
     showToast,
     generateFileName
   });
@@ -701,7 +728,8 @@ export default function CreateFile() {
         }));
         console.log('dsivisions', options)
         setDivisions(options);
-        setSelectedDivision(null)
+        // NOTE: Removed setSelectedDivision(null) here - division is now managed by handleDivisionChange
+        // Resetting here was causing issues for DESK users when they selected a division
       }
       catch (error) {
         console.error('Failed to fetch divisions:', error);
@@ -713,18 +741,22 @@ export default function CreateFile() {
   }, [selectedDepartment?.id]);
 
 
+  // COMMENTED OUT: Now fetching units directly in handleDivisionChange to avoid race conditions
   useEffect(() => {
     const fetchUnits = async () => {
+      console.log('fetchUnits triggered, selectedDivision:', selectedDivision);
       if (!selectedDivision?.id) {
         setUnits([]);
         return;
       }
 
       try {
+        console.log('Fetching units for division id:', selectedDivision.id);
         const res = await fetch(
           `${BASE_URL}/api/divisions/${selectedDivision.id}/units`
         );
         const data = await res.json();
+        console.log('Units data:', data);
 
         const options = data.map((div) => ({
           value: div.code,
@@ -733,8 +765,9 @@ export default function CreateFile() {
         }));
 
         setUnits(options);
+        console.log('Units options set:', options);
 
-        // ✅ IMPORTANT: validate selectedUnit against new options
+        // validate selectedUnit against new options
         setSelectedUnit((prev) => {
           if (!prev) return null;
           return options.find((o) => o.value === prev.value) || null;
@@ -773,16 +806,33 @@ export default function CreateFile() {
   useEffect(() => {
     let newFileName = "";
 
-    if (fileToEdit?.id) {
+    // For DESK users with pending files, always generate new file name (not use existing)
+    const isDeskWithPending = user?.user?.role_code === 'DESK' && fileToEdit?.status === 'pending';
+
+    if (fileToEdit?.id && !isDeskWithPending) {
       newFileName = fileToEdit.file_id || "";
-    } else if (
-      selectedDepartment?.value &&
-      selectedDivision?.value &&
-      selectedUnit?.value &&
-      fileNumber
-    ) {
-      const dt = new Date().getFullYear();
-      newFileName = `${selectedDepartment.value}/${selectedDivision.value}/${selectedUnit.value}/${fileNumber}/${dt}`;
+    } else {
+      // For new files or DESK users with pending files, use the REF for division
+      // because the state might not have updated yet due to React's async state updates
+      const divisionValue = isDeskWithPending ? selectedDivisionRef.current?.value : selectedDivision?.value;
+
+      if (
+        selectedDepartment?.value &&
+        divisionValue &&
+        selectedUnit?.value &&
+        fileNumber
+      ) {
+        const dt = new Date().getFullYear();
+        newFileName = `${selectedDepartment.value}/${divisionValue}/${selectedUnit.value}/${fileNumber}/${dt}`;
+        console.log('Generated file name:', newFileName);
+      } else {
+        console.log('File name generation - missing values:', {
+          dept: selectedDepartment?.value,
+          div: divisionValue,
+          unit: selectedUnit?.value,
+          fileNum: fileNumber
+        });
+      }
     }
 
     setFileName(prev => (prev === newFileName ? prev : newFileName));
@@ -792,7 +842,9 @@ export default function CreateFile() {
     selectedDivision?.value,
     selectedUnit?.value,
     fileNumber,
-    fileToEdit?.id
+    fileToEdit?.id,
+    fileToEdit?.status,
+    user?.user?.role_code
   ]);
 
 
@@ -830,10 +882,21 @@ export default function CreateFile() {
       const userDept = departments.find(
         (dept) => dept.value === user?.user?.department
       );
-      console.log('userDept', userDept)
+      console.log('userDept', userDept, user)
       setSelectedDepartment(userDept);
     }
   }, [user?.user?.department, departments]);
+
+  useEffect(() => {
+    if (divisions && user?.user?.division) {
+      const userDiv = divisions.find(
+        (div) => div.value === user?.user?.division
+      );
+      console.log('userDiv', userDiv, user)
+      setSelectedDivision(userDiv);
+      selectedDivisionRef.current = userDiv
+    }
+  }, [user?.user?.division, divisions]);
 
 
   useEffect(() => {
@@ -958,9 +1021,88 @@ export default function CreateFile() {
     console.log("selectedUnit changed");
   }, [selectedUnit]);
 
-  const handleDivisionChange = (option) => {
+  // Handle unit selection and generate file name directly
+  const handleUnitChange = (option) => {
+    setSelectedUnit(option);
+
+    // Generate file name directly using ref for latest division value
+    // This bypasses the React closure issue
+    const isDeskWithPending = user?.user?.role_code === 'DESK' && fileToEdit?.status === 'pending';
+
+    if (fileToEdit?.id && !isDeskWithPending) {
+      // Use existing file name for edits
+      return;
+    }
+
+    // Use ref to get the latest selectedDivision value
+    const currentDivision = selectedDivisionRef.current;
+    console.log('handleUnitChange - currentDivision from ref:', currentDivision);
+
+    // DEBUG: Show all values needed for file name generation
+    // alert(`File name values:\nDept: ${selectedDepartment?.value}\nDiv: ${currentDivision?.value}\nUnit: ${option?.value}\nFileNum: ${fileNumber}`);
+
+    if (
+      selectedDepartment?.value &&
+      currentDivision?.value &&
+      option?.value &&
+      fileNumber
+    ) {
+      const dt = new Date().getFullYear();
+      const newFileName = `${selectedDepartment.value}/${currentDivision.value}/${option.value}/${fileNumber}/${dt}`;
+      console.log('Generated file name in handleUnitChange:', newFileName);
+      setFileName(newFileName);
+    } else {
+      console.log('File name NOT generated - missing values:', {
+        dept: selectedDepartment?.value,
+        div: currentDivision?.value,
+        unit: option?.value,
+        fileNum: fileNumber
+      });
+    }
+  };
+
+  const handleDivisionChange = async (option) => {
+    // ALERT TEST - remove after debugging
+    // alert(`Division selected! ID: ${option?.id}, Label: ${option?.label}`);
+
+    console.log('handleDivisionChange called with option:', option);
+    console.log('option.id:', option?.id);
     setSelectedDivision(option);
-    setSelectedUnit(null);   // ✅ safe here
+
+    // Immediately update the ref so handleUnitChange can access the latest value
+    selectedDivisionRef.current = option;
+    console.log('Set selectedDivisionRef.current to:', selectedDivisionRef.current);
+    // alert(`Ref set! Value: ${selectedDivisionRef.current?.value}, ID: ${selectedDivisionRef.current?.id}`);
+
+    setSelectedUnit(null);   // Reset unit when division changes
+
+    // Directly fetch units when division changes
+    if (option?.id) {
+      try {
+        console.log('Directly fetching units for division id:', option.id);
+        const res = await fetch(`${BASE_URL}/api/divisions/${option.id}/units`);
+        const data = await res.json();
+        console.log('Direct fetch - Units data:', data);
+
+        const unitOptions = data.map((unit) => ({
+          value: unit.code,
+          label: `${unit.name} (${unit.code})`,
+          id: unit.id
+        }));
+
+        console.log('Direct fetch - Setting units:', unitOptions.length);
+        setUnits(unitOptions);
+
+        // ALERT TEST - remove after debugging
+        // alert(`Fetched ${unitOptions.length} units! Setting to state now.`);
+      } catch (error) {
+        console.error("Failed to fetch Units directly:", error);
+        alert(`ERROR fetching units: ${error.message}`);
+        setUnits([]);
+      }
+    } else {
+      setUnits([]);
+    }
   };
 
   const removeFile = (indexToRemove) => {
@@ -999,28 +1141,120 @@ export default function CreateFile() {
             </button>
           </div></div> */}
           <div className="col-md-10 bg-light border p-4">
-            {/* <h4 className="text-center mb-4">CREATE FILE</h4>
-      <button>EDIT FILE</button> */}
+            {/* Header - different for Inward Desk */}
             <div className="d-flex align-items-center mb-4">
-              <h4 className="text-center flex-grow-1 m-0">{fileToEdit?.id ? 'FILE DETAILS' : 'CREATE FILE'}</h4>
-              {/* {fileToEdit?.id && <button 
-            className="btn btn-primary ms-auto"
-            onClick={() => handleEditClick(fileToEdit)}>CLICK TO EDIT FILE</button>} */}
+              <h4 className="text-center flex-grow-1 m-0">
+                {isInwardDesk
+                  ? 'SCAN & UPLOAD DOCUMENT'
+                  : (fileToEdit?.id ? 'FILE DETAILS' : 'CREATE FILE')}
+              </h4>
             </div>
-            {/* Your Form Rows Go Here (already formatted in previous reply) */}
-            {/* Example Row */}
-            <div className="row mb-3">
-              <div className="col-md-6 d-flex align-items-center gap-2">
-                <label className="form-label mb-0" htmlFor="department">Department</label>
-                <Select
-                  options={departments}
-                  value={selectedDepartment}
-                  onChange={(selectedOption) => setSelectedDepartment(selectedOption)}
-                  isSearchable={true}
-                  placeholder="Search or Select Department"
-                  isDisabled={true}
-                />
-                {/* <select
+
+            {/* Inward Desk simplified UI - only attachment upload */}
+            {isInwardDesk ? (
+              <div className="inward-desk-upload">
+                <div className="alert alert-info mb-4">
+                  <strong>Inward Desk:</strong> Scan physical documents and upload to create a Document ID.
+                </div>
+
+                {/* Attachments section for Inward Desk */}
+                <div className="row mb-4">
+                  <div className="col-md-12">
+                    <div className="attachments-wrapper">
+                      <label className="attachments-label"><strong>Scan & Attach Documents:</strong></label>
+                      <div className="attachments-row mt-2">
+                        <label htmlFor="fileInput" className="btn btn-primary btn-lg">
+                          <i className="bi bi-upload me-2"></i> Choose Files to Upload
+                        </label>
+                        <input
+                          type="file"
+                          id="fileInput"
+                          multiple
+                          hidden
+                          onChange={handleFileChange}
+                          accept=".pdf,.jpg,.jpeg,.png,.tiff,.doc,.docx"
+                        />
+                        {file.map((f, index) => (
+                          <div key={index} className="file-chip">
+                            <span className="file-name" title={f.name}>{f.name}</span>
+                            <button
+                              type="button"
+                              className="file-remove"
+                              onClick={() => removeFile(index)}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subject field for Inward Desk - minimal info */}
+                <div className="row mb-3">
+                  <div className="col-md-12">
+                    <label className="form-label" htmlFor="file_subject"><strong>Document Subject:</strong></label>
+                    <input
+                      type="text"
+                      name="file_subject"
+                      id="file_subject"
+                      className="form-control form-control-lg"
+                      placeholder="Enter document subject/description"
+                      value={formData.file_subject}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                {/* Upload button for Inward Desk */}
+                <div className="d-flex justify-content-center mt-4">
+                  <form onSubmit={(e) =>
+                    handleCreateFile({
+                      e,
+                      mode: "create",
+                      formData,
+                      fileToEdit: null,
+                      selectedDepartment,
+                      selectedReceiver: null,
+                      selectedDivision,
+                      selectedUnit,
+                      approvalStatus: 'DRAFT',
+                      fileName,
+                      setFileNumber,
+                      file,
+                      existingAttachments: attachments, // Pass forwarded attachments
+                      stayOnPage: true // INWARD desk: stay on page with attachments until file is fully created
+                    })
+                  }>
+                    <button
+                      className="btn btn-success btn-lg px-5"
+                      type="submit"
+                      disabled={file.length === 0}
+                    >
+                      <i className="bi bi-cloud-upload me-2"></i>
+                      Upload & Generate Document ID
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ) : (
+              /* Regular user UI - full form */
+              <>
+                {/* Your Form Rows Go Here (already formatted in previous reply) */}
+                {/* Example Row */}
+                <div className="row mb-3">
+                  <div className="col-md-6 d-flex align-items-center gap-2">
+                    <label className="form-label mb-0" htmlFor="department">Department</label>
+                    <Select
+                      options={departments}
+                      value={selectedDepartment}
+                      onChange={(selectedOption) => setSelectedDepartment(selectedOption)}
+                      isSearchable={true}
+                      placeholder="Search or Select Department"
+                      isDisabled={true}
+                    />
+                    {/* <select
               value={selectedDepartment || ''}
              onChange={(e) => {
    
@@ -1037,12 +1271,12 @@ export default function CreateFile() {
     </option>
   ))}
 </select> */}
-              </div>
+                  </div>
 
 
-              <div className="col-md-6 d-flex align-items-center gap-2">
-                <label className="form-label mb-0" htmlFor="division">Divisions</label>
-                {/* <select
+                  <div className="col-md-6 d-flex align-items-center gap-2">
+                    <label className="form-label mb-0" htmlFor="division">Divisions</label>
+                    {/* <select
               value={selectedDivision}
              onChange={(e) => setSelectedDivision(e.target.value)}
                required
@@ -1058,27 +1292,33 @@ export default function CreateFile() {
     </option>
   ))}
 </select> */}
-                <Select
-                  options={divisions}
-                  value={selectedDivision}
-                  onChange={handleDivisionChange}
-                  isSearchable={true}
-                  placeholder="Divisions"
-                  isDisabled={viewMode}
-                />
-              </div>
-            </div>
-            <div className="row mb-3">
-              <div className="col-md-6 d-flex align-items-center gap-2">
-                <label className="form-label mb-0" htmlFor="unit">Units</label>
-                <Select
-                  options={units}
-                  value={selectedUnit}
-                  onChange={(selectedOption) => setSelectedUnit(selectedOption)}
-                  isSearchable={true}
-                  placeholder="Units"
-                  isDisabled={viewMode}
-                /> {/* <select
+                    <Select
+                      options={divisions}
+                      value={selectedDivision}
+                      onChange={handleDivisionChange}
+                      isSearchable={true}
+                      placeholder="Divisions"
+                    // isDisabled={viewMode && !(user?.user?.role_code === 'DESK' && fileToEdit?.status === 'pending')}
+                    // isDisabled={true}
+                    />
+                  </div>
+                </div>
+                <div className="row mb-3">
+                  <div className="col-md-6 d-flex align-items-center gap-2">
+                    <label className="form-label mb-0" htmlFor="unit">Units</label>
+                    {console.log('Units Select rendering with options:', units.length, 'units')}
+                    <Select
+                      key={`units-${selectedDivision?.id || 'none'}-${units.length}`}
+                      options={units}
+                      value={selectedUnit}
+                      onChange={handleUnitChange}
+                      isSearchable={true}
+                      placeholder={units.length > 0 ? `Select Unit (${units.length} available)` : "Units"}
+                      isDisabled={viewMode && !(user?.user?.role_code === 'DESK' && fileToEdit?.status === 'pending')}
+                      menuPortalTarget={document.body}
+                      styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                    />
+                    {units.length > 0 && <small className="text-success ms-2">({units.length} units loaded)</small>} {/* <select
               value={selectedUnit}
              onChange={(e) => setSelectedUnit(e.target.value)}
                required
@@ -1094,70 +1334,70 @@ export default function CreateFile() {
     </option>
   ))}
 </select> */}
-              </div>
-              <div className="col-md-6 d-flex align-items-center gap-2">
-                <label className="form-label mb-0" htmlFor="file_no">No.:</label>
-                <input type="text" name="file_no" id="file_no" className="form-control" value={fileNumber} readOnly />
-              </div>
-            </div>
-            <div className="row mb-3">
-              <div className="col-md-12 d-flex justify-content-center">
-                <h2 className="text-center mb-4 fw-bold">
-                  {departments?.find((dept) => dept?.label === selectedDepartment?.label)?.label}
-                </h2>
-              </div>
-            </div>
-            <div className="row mb-3">
-              <div className="col-md-12 d-flex align-items-center gap-2">
-                <label className="form-label mb-0" htmlFor="file_id">File Number:</label>
-                <input type="text" name="file_id" id="file_id" className="form-control" value={fileName}
-                  onChange={handleChange}
-                  disabled={true} />
-              </div>
-            </div>
-            {/* <div className="col-md-4 d-flex align-items-center gap-2">
+                  </div>
+                  <div className="col-md-6 d-flex align-items-center gap-2">
+                    <label className="form-label mb-0" htmlFor="file_no">No.:</label>
+                    <input type="text" name="file_no" id="file_no" className="form-control" value={fileNumber} readOnly />
+                  </div>
+                </div>
+                <div className="row mb-3">
+                  <div className="col-md-12 d-flex justify-content-center">
+                    <h2 className="text-center mb-4 fw-bold">
+                      {departments?.find((dept) => dept?.label === selectedDepartment?.label)?.label}
+                    </h2>
+                  </div>
+                </div>
+                <div className="row mb-3">
+                  <div className="col-md-12 d-flex align-items-center gap-2">
+                    <label className="form-label mb-0" htmlFor="file_id">File Number:</label>
+                    <input type="text" name="file_id" id="file_id" className="form-control" value={fileName}
+                      onChange={handleChange}
+                      disabled={true} />
+                  </div>
+                </div>
+                {/* <div className="col-md-4 d-flex align-items-center gap-2">
           <label className="form-label mb-0" htmlFor="file_subject">File Subject:</label>
           <input type="text" name="file_subject" id="file_subject" className="form-control" value={formData.file_subject} onChange={handleChange} />
         </div> */}
 
-            {/* Row 2 */}
-            <div className="row mb-3">
-              <div className="col-md-12 d-flex align-items-center gap-2">
-                <label className="form-label mb-0" htmlFor="file_subject">File Subject:</label>
-                <input type="text" name="file_subject" id="file_subject" className="form-control" value={formData.file_subject} onChange={handleChange} disabled={viewMode} />
-              </div>
-              {/* <div className="col-md-6 d-flex align-items-center gap-2">
+                {/* Row 2 */}
+                <div className="row mb-3">
+                  <div className="col-md-12 d-flex align-items-center gap-2">
+                    <label className="form-label mb-0" htmlFor="file_subject">File Subject:</label>
+                    <input type="text" name="file_subject" id="file_subject" className="form-control" value={formData.file_subject} onChange={handleChange} disabled={viewMode} />
+                  </div>
+                  {/* <div className="col-md-6 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="sender">Originator:</label>
       <input type="text" name="sender" id="sender" className="form-control" value={formData.sender} onChange={handleChange} disabled={viewMode}/>
     </div> */}
-              {/* <div className="col-md-4 d-flex align-items-center gap-2">
+                  {/* <div className="col-md-4 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="file_recipient">Recipient:</label>
       <input type="text" name="file_recipient" id="file_recipient" className="form-control" value={formData.file_recipient} onChange={handleChange} />
     </div> */}
-              {/* <div className="col-md-4 d-flex align-items-center gap-2">
+                  {/* <div className="col-md-4 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="date">Date:</label>
       <input type="date" name="date" id="date" className="form-control" value={formData.date} onChange={handleChange} />
     </div> */}
-            </div>
-            <div className="col-md-12">
-              <label className="form-label" htmlFor="remarks">File Matter:</label>
-              {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
-              <RemarksEditor formData={formData} setFormData={setFormData}
-                viewMode={viewMode} />
-              {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
+                </div>
+                <div className="col-md-12">
+                  <label className="form-label" htmlFor="remarks">File Matter:</label>
+                  {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
+                  <RemarksEditor formData={formData} setFormData={setFormData}
+                    viewMode={viewMode} />
+                  {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
         viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/> */}
-            </div>
-            {/* Row 3 */}
-            <div className="row mb-3">
-              {/* <div className="col-md-6 d-flex align-items-center gap-2">
+                </div>
+                {/* Row 3 */}
+                <div className="row mb-3">
+                  {/* <div className="col-md-6 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="receiver">File Recipient:</label>
       <input type="text" name="receiver" id="receiver" className="form-control" value={formData.receiver} onChange={handleChange} disabled={viewMode}/>
     </div> */}
-              {fileToEdit?.id && <div className="col-md-6 d-flex align-items-center gap-2">
-                <label className="form-label mb-0" htmlFor="date_added">Date:</label>
-                <input type="datetime-local" name="date_added" id="date_added" className="form-control" value={formData.date_added} onChange={handleChange} disabled={viewMode} />
-              </div>}
-              {/* <div className="col-md-6 d-flex align-items-center gap-2">
+                  {fileToEdit?.id && <div className="col-md-6 d-flex align-items-center gap-2">
+                    <label className="form-label mb-0" htmlFor="date_added">Date:</label>
+                    <input type="datetime-local" name="date_added" id="date_added" className="form-control" value={formData.date_added} onChange={handleChange} disabled={viewMode} />
+                  </div>}
+                  {/* <div className="col-md-6 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="current_status">Live File Location:</label>      
       <Select
                   options={departments}
@@ -1168,8 +1408,8 @@ export default function CreateFile() {
                   placeholder="Live File Location"
                 /> 
     </div> */}
-            </div>
-            {/* <div className="row mb-3">
+                </div>
+                {/* <div className="row mb-3">
     <div className="col-md-6 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="inwardnum">Inward No:</label>
       <input type="text" name="inwardnum" id="inwardnum" className="form-control" value={formData.inwardnum} onChange={handleChange} disabled={viewMode}/>
@@ -1181,54 +1421,53 @@ export default function CreateFile() {
   
   </div> */}
 
-            {/* <div className="row mb-3">
+                {/* <div className="row mb-3">
         <div className="col-md-12 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="current_status">Live File Location:</label>
       <input type="text" name="current_status" id="current_status" className="form-control" value={formData.current_status} onChange={handleChange} disabled={viewMode}/>
     </div>
    </div> */}
-            {/* Remarks */}
-            {/* <div className="row mb-3">
+                {/* Remarks */}
+                {/* <div className="row mb-3">
     <div className="col-md-12">
       <label className="form-label" htmlFor="remarks">Note File:</label> */}
-            {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
-            {/* <RemarksEditor formData={formData} setFormData={setFormData}
+                {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
+                {/* <RemarksEditor formData={formData} setFormData={setFormData}
             viewMode={viewMode} /> */}
-            {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
+                {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
         viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/> */}
-            {/* </div>
+                {/* </div>
   </div> */}
 
-            {/* Attachments */}
-            {/* <div className="row mb-4">
+                {/* Attachments */}
+                {/* <div className="row mb-4">
     <div className="col-md-12">
       <label className="form-label" htmlFor="file">Attachments:</label>
       <input type="file" className="form-control" multiple name="file" id="file" onChange={handleFileChange} />
     </div>
   </div> */}
-            {attachments?.length > 0 && (
-              <div className="mb-3">
-                <label className="form-label">Existing Attachments:</label>
-                <ul className="list-group">
-                  {attachments?.map((att, index) => (
-                    <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-                      <a href={`${BASE_URL}/${att.path}`} target="_blank" rel="noopener noreferrer" className="text-break">
-                        {/* {att.path.split('/').pop()} Just the filename */}
-                        {att?.filename}
-                      </a>
-                      {!viewMode && <button
-                        onClick={() => handleDeleteAttachment(att?.id)}
-                        className="btn btn-sm btn-danger">
-                        Delete
-                      </button>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {!viewMode && <div className="row mb-4">
-              <div className="col-md-12">
-                {/* <label className="form-label">Attachments:</label>
+                {attachments?.length > 0 && (
+                  <div className="mb-3">
+                    <label className="form-label">Existing Attachments:</label>
+                    <ul className="list-group">
+                      {attachments?.map((att, index) => (
+                        <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
+                          <a href={`${BASE_URL}/${att.path}`} target="_blank" rel="noopener noreferrer" className="text-break">
+                            {att?.document_id ? `[${att.document_id}] ` : ""}{att?.filename}
+                          </a>
+                          {!viewMode && <button
+                            onClick={() => handleDeleteAttachment(att?.id)}
+                            className="btn btn-sm btn-danger">
+                            Delete
+                          </button>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {!viewMode && <div className="row mb-4">
+                  <div className="col-md-12">
+                    {/* <label className="form-label">Attachments:</label>
                 <div className="input-group">
                   <label htmlFor="file" className="btn btn-primary">
                     Choose Files
@@ -1247,41 +1486,41 @@ export default function CreateFile() {
                       : "No files selected"}
                   </div>
                 </div> */}
-                <div className="attachments-wrapper">
-                  <label className="attachments-label">Attachments:</label>
+                    <div className="attachments-wrapper">
+                      <label className="attachments-label">Attachments:</label>
 
-                  <div className="attachments-row">
-                    <label htmlFor="fileInput" className="btn btn-primary">
-                      Choose Files
-                    </label>
+                      <div className="attachments-row">
+                        <label htmlFor="fileInput" className="btn btn-primary">
+                          Choose Files
+                        </label>
 
-                    <input
-                      type="file"
-                      id="fileInput"
-                      multiple
-                      hidden
-                      onChange={handleFileChange}
-                    />
+                        <input
+                          type="file"
+                          id="fileInput"
+                          multiple
+                          hidden
+                          onChange={handleFileChange}
+                        />
 
-                    {file.map((file, index) => (
-                      <div key={index} className="file-chip">
-                        <span className="file-name" title={file.name}>
-                          {file.name}
-                        </span>
-                        <button
-                          type="button"
-                          className="file-remove"
-                          onClick={() => removeFile(index)}
-                        >
-                          ✕
-                        </button>
+                        {file.map((file, index) => (
+                          <div key={index} className="file-chip">
+                            <span className="file-name" title={file.name}>
+                              {file.name}
+                            </span>
+                            <button
+                              type="button"
+                              className="file-remove"
+                              onClick={() => removeFile(index)}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </div>
-              </div>
-            </div>}
-            {/* <div className="row mb-3">
+                </div>}
+                {/* <div className="row mb-3">
               <div className="col-md-12 d-flex align-items-center gap-2">
                 <label className="form-label mb-0" htmlFor="receiver">Forwarded To:</label>
               
@@ -1296,7 +1535,7 @@ export default function CreateFile() {
                 />
               </div>
             </div> */}
-            {/* {fileToEdit?.id && user?.user?.role === 'admin' && <button 
+                {/* {fileToEdit?.id && user?.user?.role === 'admin' && <button 
             className="btn btn-primary ms-auto"
             onClick={() => handleEditClick(fileToEdit)}>EDIT FILE</button>}
             
@@ -1306,10 +1545,10 @@ export default function CreateFile() {
         File Timeline
       </button>
     </div>} */}
-            {fileToEdit?.id && (
-              <div className="d-flex mt-3">
-                {console.log('user role', user)}
-                {/* {(user?.user?.role_id == 1 || user?.user?.role_id == 2) && (
+                {fileToEdit?.id && (
+                  <div className="d-flex mt-3">
+                    {console.log('user role', user)}
+                    {/* {(user?.user?.role_id == 1 || user?.user?.role_id == 2) && (
       <button 
         className="btn btn-primary"
         onClick={() => handleEditClick(fileToEdit)}
@@ -1317,54 +1556,67 @@ export default function CreateFile() {
         EDIT FILE
       </button>
     )} */}
-                {(hasPermission("edit")) && (
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleEditClick(fileToEdit)}
-                  >
-                    EDIT FILE
-                  </button>
-                )}
-                <div className="ms-auto">
-                  <button
-                    className="btn btn-secondary px-5"
-                    onClick={() => handleTimeline(fileToEdit)}
-                  >
-                    File Timeline
-                  </button>
-                </div>
+                    {(hasPermission("edit")) && (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => handleEditClick(fileToEdit)}
+                      >
+                        EDIT FILE
+                      </button>
+                    )}
+                    <div className="ms-auto">
+                      <button
+                        className="btn btn-secondary px-5"
+                        onClick={() => handleTimeline(fileToEdit)}
+                      >
+                        File Timeline
+                      </button>
+                    </div>
 
-              </div>
-            )}
-
-            {/* Add more rows as per previous layout */}
-
-            {/* Final Save Button */}
-            {!viewMode && (
-              <form onSubmit={(e) =>
-                handleCreateFile({
-                  e,
-                  mode: fileToEdit?.id ? "edit" : "create",
-                  formData,
-                  fileToEdit: fileToEdit || null,
-                  selectedDepartment,
-                  selectedReceiver,
-                  selectedDivision,
-                  selectedUnit,
-                  approvalStatus,
-                  fileName,
-                  setFileNumber,
-                  file
-                })
-              }>
-                <div className="d-flex justify-content-center mt-4 gap-3">
-                  <div>
-                    <button className="btn btn-success px-5" type="submit">
-                      {fileToEdit?.id ? 'Update' : 'Create'}
-                    </button>
                   </div>
+                )}
 
-                  {/* <button
+                {/* Add more rows as per previous layout */}
+
+                {/* Final Save Button */}
+                {/* Show button if not in viewMode, OR if DESK user with DRAFT/pending file */}
+                {(!viewMode || (hasRole('DESK') && (fileToEdit?.status === 'DRAFT' || fileToEdit?.status === 'pending'))) && (
+                  <form onSubmit={(e) =>
+                    handleCreateFile({
+                      e,
+                      mode: fileToEdit?.id ? "edit" : "create",
+                      formData,
+                      fileToEdit: fileToEdit || null,
+                      selectedDepartment,
+                      selectedReceiver,
+                      selectedDivision,
+                      selectedUnit,
+                      approvalStatus,
+                      fileName,
+                      setFileNumber,
+                      file,
+                      existingAttachments: attachments, // Pass forwarded attachments
+                      // Navigate to Created Files tab after file creation
+                      stayOnPage: false
+                    })
+                  }>
+                    <div className="d-flex justify-content-center mt-4 gap-3">
+                      {/* For DESK users with pending files: show Create File button */}
+                      {hasRole('DESK') && fileToEdit?.status === 'pending' ? (
+                        <div>
+                          <button className="btn btn-success px-5" type="submit">
+                            Create File
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <button className="btn btn-success px-5" type="submit">
+                            {fileToEdit?.id ? 'Update' : 'Create'}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* <button
                     disabled={!fileToEdit?.id}
                     onClick={(e) =>
                       handleSendFile({
@@ -1375,14 +1627,16 @@ export default function CreateFile() {
                   >
                     Send File
                   </button> */}
-                  {fileToEdit?.id && <div>
-                    <button className="btn btn-secondary px-5" onClick={handleCancel}>
-                      Cancel
-                    </button>
-                  </div>}
+                      {fileToEdit?.id && fileToEdit?.status !== 'pending' && <div>
+                        <button className="btn btn-secondary px-5" onClick={handleCancel}>
+                          Cancel
+                        </button>
+                      </div>}
 
-                </div>
-              </form>
+                    </div>
+                  </form>
+                )}
+              </>
             )}
           </div>
 
@@ -1399,7 +1653,7 @@ export default function CreateFile() {
                   <span>{new Date(comment?.created_at).toLocaleString()}</span>
                   {/* <a href="#" class="btn btn-primary">Button</a> */}
                   <span>{comment?.attachments?.map((attach, idx) => <p key={idx} style={{ color: 'red' }}>Attachments: <a href={`${BASE_URL}/${attach?.path}`} target="_blank" rel="noopener noreferrer" className="text-break">
-                    {attach?.filename}
+                    {attach?.document_id ? `[${attach.document_id}] ` : ""}{attach?.filename}
                   </a></p>)}</span>
                 </div>
               </div>

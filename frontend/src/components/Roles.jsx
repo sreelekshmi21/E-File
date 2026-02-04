@@ -2,22 +2,22 @@ import React from 'react'
 import { useEffect } from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import AddRoleModal from './AddRoleModal';
 
 export default function Roles() {
 
   const [roles, setRoles] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const BASE_URL = import.meta.env.VITE_API_URL
 
+  const fetchRoles = async () => {
+    const res = await fetch(`${BASE_URL}/api/roles`)
+    const data = await res.json()
+    setRoles(data)
+  }
+
   useEffect(() => {
-    const fetchRoles = async () => {
-      const res = await fetch(`${BASE_URL}/api/roles`)
-      const data = await res.json()
-      //   setRoles);
-      setRoles(data)
-
-    }
-
     fetchRoles()
   }, []);
 
@@ -52,13 +52,40 @@ export default function Roles() {
     alert("✅ Permissions updated!");
   };
 
+  const handleCreateRole = async (roleData) => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(roleData)
+      });
+
+      if (res.ok) {
+        alert("✅ Role created successfully!");
+        fetchRoles(); // Refresh the roles list
+      } else {
+        const error = await res.json();
+        alert(`❌ Failed to create role: ${error.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error("Error creating role:", error);
+      alert("❌ Error creating role");
+    }
+  };
+
   return (
     <>
       <div className="container mt-4">
         <Link to='/adminpanel'>Back to Admin Panel</Link>
-        <button className="add-role-btn">
+        <button className="add-role-btn" onClick={() => setIsModalOpen(true)}>
           + Add Role
         </button>
+
+        <AddRoleModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onCreate={handleCreateRole}
+        />
         <h3>Role-Based Access Control</h3>
         <table className="table table-bordered">
           <thead>

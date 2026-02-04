@@ -1,10 +1,11 @@
 import React from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 
 export default function Sidebar({ isOpen, onClose }) {
 
-  const { logout, user } = useAuth();
+  const { logout, user, hasRole, isAdmin } = useAuth();
 
   const navigate = useNavigate()
 
@@ -54,12 +55,14 @@ export default function Sidebar({ isOpen, onClose }) {
           }
           onClick={handleNavClick}
         >
-          <i className="bi bi-file-earmark"></i>
-          Create File
+          {/* Show 'Upload Attachments' only if user ONLY has INWARD role (and no DESK or other file-creation roles) */}
+          {/* Users with multiple roles (e.g., INWARD + DESK) should see full 'Create File' functionality */}
+          <i className={hasRole('INWARD') && !hasRole('DESK') ? "bi bi-upload" : "bi bi-file-earmark"}></i>
+          {hasRole('INWARD') && !hasRole('DESK') ? 'Upload Attachments' : 'Create File'}
         </NavLink>
       </li>
       <li className="nav-item">
-        {user?.user?.role_id == 1 && <NavLink
+        {isAdmin() && <NavLink
           to="/adminpanel"
           className={({ isActive }) =>
             `nav-link d-flex align-items-center gap-2 ${isActive ? "active-link" : ""}`
@@ -103,6 +106,9 @@ export default function Sidebar({ isOpen, onClose }) {
     <>
       {/* Desktop Sidebar */}
       <div className="col-12 col-md-2 sidebar p-3 d-none d-md-block">
+        <div className="d-flex justify-content-end mb-3">
+          <NotificationBell />
+        </div>
         {navContent}
       </div>
 

@@ -412,33 +412,50 @@ app.post('/api/comments', upload.array("file", 10), (req, res) => {
         });
       }
 
-      // ✅ Insert attachments
+      // ✅ Insert attachments with Document IDs
       const insertAttachmentsQuery = `
-        INSERT INTO attachments (file_id, path, filename,comment_id)
+        INSERT INTO attachments (file_id, path, filename, comment_id, document_id)
         VALUES ?
       `;
 
-      const attachmentValues = attachments.map((file) => [
-        numericFileId,           // foreign key to comments
-        file.path,
-        file.originalname,
-        commentId
-      ]);
+      // We need to use async/await for generateDocumentId, but this is a callback route.
+      // We'll use a wrapper to handle the async document ID generation.
+      const processCommentAttachments = async () => {
+        const attachmentValues = [];
+        for (const file of attachments) {
+          let attDocId = null;
+          try {
+            // Fetch sender department from file record? Or just use 'COMMENT'
+            attDocId = await generateDocumentId('COMMENT');
+          } catch (e) { }
 
-      db.query(insertAttachmentsQuery, [attachmentValues], (attErr, attResult) => {
-        if (attErr) {
-          console.error("Attachment insert error:", attErr);
-          return res.status(500).json({
-            error: "Comment saved, but failed to save attachments",
-            commentId
-          });
+          attachmentValues.push([
+            numericFileId,
+            file.path,
+            file.originalname,
+            commentId,
+            attDocId
+          ]);
         }
+        return attachmentValues;
+      };
 
-        // ✅ Only ONE response here
-        return res.status(201).json({
-          message: "Comment and attachments uploaded successfully",
-          commentId,
-          attachment_count: attachments.length
+      processCommentAttachments().then(attachmentValues => {
+        db.query(insertAttachmentsQuery, [attachmentValues], (attErr, attResult) => {
+          if (attErr) {
+            console.error("Attachment insert error:", attErr);
+            return res.status(500).json({
+              error: "Comment saved, but failed to save attachments",
+              commentId
+            });
+          }
+
+          // ✅ Only ONE response here
+          return res.status(201).json({
+            message: "Comment and attachments uploaded successfully",
+            commentId,
+            attachment_count: attachments.length
+          });
         });
       });
     });
@@ -488,12 +505,29 @@ app.post("/signup", async (req, res) => {
         "INSERT INTO signup (fullname, username, passwd, email, department, section, designation, role_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
       db.query(
         insertQuery,
-        [fullname, username, password, email, department, req.body.section, designation, role_id],
-        (err, result) => {
+        [fullname, username, password, email, department, req.body.section, designation, Array.isArray(role_id) ? role_id[0] : role_id],
+        async (err, result) => {
           if (err) {
             console.error("Insert error:", err);
             return res.status(500).json({ error: "Failed to register user" });
           }
+
+          const userId = result.insertId;
+          const rolesToAssign = Array.isArray(role_id) ? role_id : [role_id];
+
+          // Insert into user_roles
+          const userRolesValues = rolesToAssign.map(rid => [userId, rid]);
+          try {
+            await db.promise().query(
+              "INSERT INTO user_roles (user_id, role_id) VALUES ?",
+              [userRolesValues]
+            );
+          } catch (roleErr) {
+            console.error("Error assigning roles:", roleErr);
+            // We don't fail the signup if role assignment fails, but maybe we should?
+            // For now, just log it.
+          }
+
           return res.status(201).json({ message: "Signed up successfully!" });
         }
       );
@@ -582,19 +616,46 @@ app.post("/login", async (req, res) => {
 
     const user = results[0];
 
-    // ✅ Fetch permissions for the user's role
-    const [permissions] = await db.promise().query(
-      `SELECT p.name
-       FROM role_permissions rp
-       JOIN permissions p ON rp.permission_id = p.id
-       WHERE rp.role_id = ?`,
-      [user.role_id]
+    // ✅ Fetch all roles for the user
+    const [userRoles] = await db.promise().query(
+      `SELECT r.id, r.code, r.name 
+       FROM user_roles ur
+       JOIN roles r ON ur.role_id = r.id
+       WHERE ur.user_id = ?`,
+      [user.id]
     );
 
-    const permissionNames = permissions.map(p => p.name);
+    // If no roles found in user_roles, fallback to single role_id if present
+    let finalRoles = userRoles;
+    if (finalRoles.length === 0 && user.role_id) {
+      const [roleDetails] = await db.promise().query(
+        `SELECT id, code, name FROM roles WHERE id = ?`,
+        [user.role_id]
+      );
+      if (roleDetails.length > 0) finalRoles = [roleDetails[0]];
+    }
+
+    // ✅ Fetch permissions for all roles assigned to the user
+    const roleIds = finalRoles.map(r => r.id);
+    let permissionNames = [];
+    if (roleIds.length > 0) {
+      const [permissions] = await db.promise().query(
+        `SELECT DISTINCT p.name
+         FROM role_permissions rp
+         JOIN permissions p ON rp.permission_id = p.id
+         WHERE rp.role_id IN (?)`,
+        [roleIds]
+      );
+      permissionNames = permissions.map(p => p.name);
+    }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role_id: user.role_id },
+      {
+        id: user.id,
+        username: user.username,
+        role_ids: roleIds,
+        role_id: roleIds[0] // fallback for legacy code
+      },
       SECRET_KEY,
       { expiresIn: '24h' }
     );
@@ -607,8 +668,12 @@ app.post("/login", async (req, res) => {
         username: user.username,
         email: user.email,
         department: user.department,
-        role_id: user.role_id,
+        roles: finalRoles, // Return array of roles
+        role_id: roleIds[0], // backward compatibility
+        role_code: finalRoles[0]?.code, // backward compatibility
+        role_name: finalRoles[0]?.name, // backward compatibility
         token: token,
+        division: user.section
       },
       permissions: permissionNames,
     });
@@ -884,7 +949,11 @@ app.post("/login", async (req, res) => {
 app.post(
   "/createfilewithattachments",
   upload.array("file", 10),
-  (req, res) => {
+  async (req, res) => {
+    console.log("=== /createfilewithattachments CALLED ===");
+    console.log("req.body:", JSON.stringify(req.body, null, 2));
+    console.log("req.files count:", req.files?.length || 0);
+
     const {
       file_id,
       fileName,
@@ -896,22 +965,113 @@ app.post(
       unit,
       file_no,
       sender,
-      created_by_user_id
+      created_by_user_id,
+      role_code,  // Added to detect Inward Desk uploads
+      existing_attachment_ids  // IDs of attachments from forwarded files
     } = req.body;
 
     const date_added = new Date();
     const expiry_date = new Date(date_added.getTime() + 3 * 60 * 1000);
 
     const attachments = req.files;
+    console.log("Attachments from req.files:", attachments?.length || 0);
 
-    if (!file_id || !fileName || !file_subject) {
+    // Check if this is an Inward Desk upload (skip validation for required fields)
+    const isInwardDesk = role_code === 'INWARD';
+    console.log("Is Inward Desk:", isInwardDesk);
+
+    // Only validate required fields for non-Inward Desk users
+    if (!isInwardDesk && (!file_id || !fileName || !file_subject)) {
       return res.status(400).json({
         error: "Missing required fields"
       });
     }
 
+    // For Inward Desk: auto-generate file_id and fileName if not provided
+    let effectiveFileId = file_id;
+    let effectiveFileName = fileName;
+    let effectiveFileSubject = file_subject;
+
+    if (isInwardDesk) {
+      // Generate attachment number in format: department/serial_number/year
+      const userDepartment = sender || department || 'INWARD';
+      const year = new Date().getFullYear();
+
+      // Get the next serial number from document_counter for this department
+      try {
+        const connection = await dbPromise1.getConnection();
+        const deptCode = userDepartment.toUpperCase();
+
+        try {
+          await connection.beginTransaction();
+
+          // Check if department counter exists
+          const [existing] = await connection.query(
+            `SELECT count FROM document_counter WHERE department = ?`,
+            [deptCode]
+          );
+
+          let serialNumber;
+          if (existing.length === 0) {
+            // Create new counter for this department
+            await connection.query(
+              `INSERT INTO document_counter (department, count) VALUES (?, 1)`,
+              [deptCode]
+            );
+            serialNumber = 1;
+          } else {
+            // Increment the counter atomically
+            await connection.query(
+              `UPDATE document_counter SET count = count + 1 WHERE department = ?`,
+              [deptCode]
+            );
+
+            // Get the updated count
+            const [rows] = await connection.query(
+              `SELECT count FROM document_counter WHERE department = ?`,
+              [deptCode]
+            );
+            serialNumber = rows[0].count;
+          }
+
+          await connection.commit();
+          connection.release();
+
+          // Format: department/serial_number/year (e.g., OGS/001/2026)
+          const paddedSerial = serialNumber.toString().padStart(3, '0');
+          const generatedId = `${deptCode}/${paddedSerial}/${year}`;
+
+          if (!effectiveFileId) {
+            effectiveFileId = generatedId;
+          }
+          if (!effectiveFileName) {
+            effectiveFileName = generatedId;
+          }
+        } catch (txErr) {
+          await connection.rollback();
+          connection.release();
+          throw txErr;
+        }
+      } catch (dbErr) {
+        console.error("Error generating INWARD file ID:", dbErr);
+        // Fallback to timestamp-based ID if database error
+        const timestamp = Date.now();
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        if (!effectiveFileId) {
+          effectiveFileId = `INWARD-${timestamp}-${randomSuffix}`;
+        }
+        if (!effectiveFileName) {
+          effectiveFileName = `INWARD-${timestamp}-${randomSuffix}`;
+        }
+      }
+
+      if (!effectiveFileSubject) {
+        effectiveFileSubject = "Scanned Document";
+      }
+    }
+
     // Convert OGS/SM/OGS/44/2025 → OGS-SM-OGS-44-2025
-    const safeFolderName = fileName.replace(/\//g, "-");
+    const safeFolderName = effectiveFileName.replace(/\//g, "-");
     const folderPath = path.join(__dirname, "uploads", safeFolderName);
 
     if (!fs.existsSync(folderPath)) {
@@ -919,9 +1079,27 @@ app.post(
     }
 
     /* ==========================
+       GENERATE DOCUMENT ID
+    ========================== */
+    let document_id = null;
+    if (isInwardDesk) {
+      // For Inward Desk: use the generated file number/ID as the Document ID
+      document_id = effectiveFileId;
+    } else {
+      try {
+        // Use sender department code for the Document ID
+        document_id = await generateDocumentId(sender || department);
+        console.log("Generated Document ID:", document_id);
+      } catch (docIdErr) {
+        console.error("Document ID generation error:", docIdErr);
+        // Continue without Document ID if generation fails
+      }
+    }
+
+    /* ==========================
        INSERT FILE (DRAFT)
     ========================== */
-    const safeFolderNameForPath = fileName.replace(/\//g, "-");
+    const safeFolderNameForPath = effectiveFileName.replace(/\//g, "-");
     const insertFileQuery = `
       INSERT INTO files (
         file_id,
@@ -944,15 +1122,16 @@ app.post(
         inwardnum,
         outwardnum,
         path,
-        created_by_user_id
+        created_by_user_id,
+        document_id
       )
-      VALUES (?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const fileValues = [
-      file_id,
-      fileName,
-      file_subject,
+      effectiveFileId,
+      effectiveFileName,
+      effectiveFileSubject,
       date_added,
       current_status,
       remarks || "",
@@ -969,10 +1148,11 @@ app.post(
       req.body.inwardnum || "",
       req.body.outwardnum || "",
       `uploads/${safeFolderNameForPath}`, // path
-      created_by_user_id || null  // creator's user ID
+      created_by_user_id || null,  // creator's user ID
+      document_id  // Document ID
     ];
 
-    db.query(insertFileQuery, fileValues, (fileErr, fileResult) => {
+    db.query(insertFileQuery, fileValues, async (fileErr, fileResult) => {
       if (fileErr) {
         console.error("File insert error:", fileErr);
         return res.status(500).json({
@@ -983,50 +1163,165 @@ app.post(
       /* ==========================
          ATTACHMENTS
       ========================== */
-      if (attachments && attachments.length > 0) {
-        const movedFiles = [];
+      console.log("=== ATTACHMENT SAVING DEBUG ===");
+      console.log("req.files received:", req.files?.length || 0, "files");
+      console.log("attachments variable:", attachments?.length || 0, "files");
+      console.log("File inserted with ID:", fileResult.insertId);
+      console.log("Folder path:", folderPath);
+      console.log("Safe folder name:", safeFolderName);
+      console.log("existing_attachment_ids:", existing_attachment_ids);
 
-        attachments.forEach((file) => {
+      const newFileId = fileResult.insertId;
+
+      // Parse existing attachment IDs if provided (from forwarded files)
+      let existingAttachmentIds = [];
+      if (existing_attachment_ids) {
+        try {
+          existingAttachmentIds = JSON.parse(existing_attachment_ids);
+          console.log("Parsed existing attachment IDs:", existingAttachmentIds);
+        } catch (parseErr) {
+          console.error("Error parsing existing_attachment_ids:", parseErr);
+        }
+      }
+
+      // Helper function to send final response
+      const sendResponse = (attachmentCount, existingCount = 0) => {
+        return res.status(201).json({
+          message: "File created in draft mode",
+          id: newFileId,
+          document_id: document_id,
+          attachment_count: attachmentCount,
+          existing_attachment_count: existingCount,
+          folder_used: safeFolderName
+        });
+      };
+
+      // Helper function to COPY existing attachments to the new file
+      // This duplicates attachment records so both the original and new file have access
+      const linkExistingAttachments = (callback) => {
+        if (existingAttachmentIds.length === 0) {
+          return callback(0);
+        }
+
+        console.log("Copying existing attachments to new file...");
+        console.log("Attachment IDs to copy:", existingAttachmentIds);
+
+        // First, fetch the existing attachment details
+        const selectQuery = `SELECT path, filename, document_id FROM attachments WHERE id IN (?)`;
+
+        db.query(selectQuery, [existingAttachmentIds], (selectErr, existingAttachments) => {
+          if (selectErr) {
+            console.error("Error fetching existing attachments:", selectErr);
+            return callback(0);
+          }
+
+          if (!existingAttachments || existingAttachments.length === 0) {
+            console.log("No existing attachments found to copy");
+            return callback(0);
+          }
+
+          console.log("Found existing attachments:", existingAttachments.length);
+
+          // Create new attachment records for the new file
+          const insertQuery = `INSERT INTO attachments (file_id, path, filename, document_id) VALUES ?`;
+          const newAttachments = existingAttachments.map(att => [
+            newFileId,
+            att.path,
+            att.filename,
+            att.document_id
+          ]);
+
+          db.query(insertQuery, [newAttachments], (insertErr, insertResult) => {
+            if (insertErr) {
+              console.error("Error copying attachments:", insertErr);
+              return callback(0);
+            }
+            console.log("✓ Attachments copied successfully:", insertResult?.affectedRows);
+            callback(insertResult?.affectedRows || 0);
+          });
+        });
+      };
+
+      if (attachments && attachments.length > 0) {
+        console.log("✓ Attachments found, proceeding to save to database...");
+        const insertAttachmentsQuery = `
+          INSERT INTO attachments (file_id, path, filename, document_id)
+          VALUES ?
+        `;
+
+        // Generate Document IDs for each attachment
+        const movedFiles = [];
+        for (const file of attachments) {
+          console.log(`  File:`, file.originalname);
           const newPath = path.join(folderPath, file.originalname);
           fs.renameSync(file.path, newPath);
 
-          movedFiles.push([
-            fileResult.insertId,
-            `uploads/${safeFolderName}/${file.originalname}`,
-            file.originalname
-          ]);
-        });
+          // Generate Document ID for this attachment
+          let attachmentDocId = null;
+          if (isInwardDesk) {
+            // For Inward Desk: all attachments share the same file number as their Document ID
+            attachmentDocId = effectiveFileId;
+          } else {
+            try {
+              attachmentDocId = await generateDocumentId(sender || department || 'SYSTEM');
+            } catch (docErr) {
+              console.error("Error generating attachment document ID:", docErr);
+            }
+          }
 
-        const insertAttachmentsQuery = `
-          INSERT INTO attachments (file_id, path, filename)
-          VALUES ?
-        `;
+          movedFiles.push([
+            newFileId,
+            `uploads/${safeFolderName}/${file.originalname}`,
+            file.originalname,
+            attachmentDocId
+          ]);
+        }
 
         db.query(
           insertAttachmentsQuery,
           [movedFiles],
-          (attErr) => {
+          (attErr, attResult) => {
             if (attErr) {
-              console.error("Attachment insert error:", attErr);
+              console.error("❌ Attachment insert error:", attErr);
               return res.status(500).json({
                 error:
                   "File created but failed to save attachments"
               });
             }
 
-            return res.status(201).json({
-              message: "File created in draft mode",
-              id: fileResult.insertId,
-              attachment_count: attachments.length,
-              folder_used: safeFolderName
+            console.log("✓ Attachments inserted successfully!");
+            console.log("  Rows affected:", attResult?.affectedRows);
+            console.log("  Insert ID:", attResult?.insertId);
+
+            // Link existing attachments after inserting new ones
+            linkExistingAttachments((existingCount) => {
+              sendResponse(attachments.length, existingCount);
             });
           }
         );
       } else {
-        return res.status(201).json({
-          message: "File created in draft mode (no attachments)",
-          id: fileResult.insertId,
-          attachment_count: 0
+        console.log("⚠ NO new attachments from file input");
+        console.log("  attachments:", attachments);
+        console.log("  req.files:", req.files);
+
+        // Link existing attachments even if no new ones
+        linkExistingAttachments((existingCount) => {
+          if (existingCount > 0) {
+            return res.status(201).json({
+              message: "File created in draft mode with linked attachments",
+              id: newFileId,
+              document_id: document_id,
+              attachment_count: 0,
+              existing_attachment_count: existingCount
+            });
+          } else {
+            return res.status(201).json({
+              message: "File created in draft mode (no attachments)",
+              id: newFileId,
+              document_id: document_id,
+              attachment_count: 0
+            });
+          }
         });
       }
     });
@@ -1037,7 +1332,7 @@ app.post(
 
 
 
-app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) => {
+app.put("/createfilewithattachments/:id", upload.array("file", 10), async (req, res) => {
   const fileId = req.params.id;
 
   const {
@@ -1108,7 +1403,7 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
     fileId
   ];
 
-  db.query(updateFileQuery, updateFileValues, (fileErr, fileResult) => {
+  db.query(updateFileQuery, updateFileValues, async (fileErr, fileResult) => {
     if (fileErr) {
       console.error("File update error:", fileErr);
       return res.status(500).json({ error: "Failed to update file" });
@@ -1131,17 +1426,32 @@ app.put("/createfilewithattachments/:id", upload.array("file", 10), (req, res) =
     //     return res.status(500).json({ error: "Failed to delete old attachments" });
     //   }
 
-    //   // ✅ Insert new attachments
+    // Insert new attachments
+    // We'll use a loop to handle async Document ID generation if needed, 
+    // but for simplicity in PUT we'll process it below after the map.
+    // Generate Document IDs for new attachments
+    const attachmentValues = [];
+    for (const file of attachments) {
+      // Generate unique Document ID for this new attachment
+      let attachmentDocId = null;
+      try {
+        attachmentDocId = await generateDocumentId(sender || department || 'SYSTEM');
+      } catch (docErr) {
+        console.error("Error generating attachment document ID during update:", docErr);
+      }
+
+      attachmentValues.push([
+        fileId,
+        file.path,
+        file.originalname,
+        attachmentDocId
+      ]);
+    }
+
     const insertAttachmentsQuery = `
-        INSERT INTO attachments (file_id, path, filename)
+        INSERT INTO attachments (file_id, path, filename, document_id)
         VALUES ?
       `;
-
-    const attachmentValues = attachments.map((file) => [
-      fileId,
-      file.path,
-      file.originalname
-    ]);
 
     db.query(insertAttachmentsQuery, [attachmentValues], (attErr, attResult) => {
       if (attErr) {
@@ -1660,7 +1970,7 @@ app.get('/api/attachments', async (req, res) => {
 
   try {
     const [attachments] = await dbPromise.query(
-      'SELECT path, filename, id FROM attachments WHERE file_id = ?',
+      'SELECT path, filename, id, document_id FROM attachments WHERE file_id = ?',
       [file_id]
     );
 
@@ -1671,6 +1981,94 @@ app.get('/api/attachments', async (req, res) => {
     console.error('Error fetching attachments:', err);
     console.error('Error fetching attachments:', err.message);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+// === UTILITY: Repair missing attachments for a file ===
+// Scans the file's upload folder and adds any files not in the database
+app.post('/api/attachments/repair/:fileId', async (req, res) => {
+  const fileId = req.params.fileId;
+
+  try {
+    // Get the file record to find its folder path
+    const [files] = await dbPromise.query(
+      'SELECT id, file_id, file_name, path FROM files WHERE id = ?',
+      [fileId]
+    );
+
+    if (files.length === 0) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    const file = files[0];
+    const folderPath = file.path || `uploads/${file.file_name?.replace(/\//g, '-') || file.file_id?.replace(/\//g, '-')}`;
+    const fullFolderPath = path.join(__dirname, folderPath);
+
+    console.log('=== REPAIR ATTACHMENTS ===');
+    console.log('File ID:', fileId);
+    console.log('Folder path:', fullFolderPath);
+
+    // Check if folder exists
+    if (!fs.existsSync(fullFolderPath)) {
+      return res.status(404).json({
+        error: 'Upload folder not found',
+        folder: fullFolderPath
+      });
+    }
+
+    // Get existing attachments from database
+    const [existingAttachments] = await dbPromise.query(
+      'SELECT filename FROM attachments WHERE file_id = ?',
+      [fileId]
+    );
+    const existingFilenames = existingAttachments.map(a => a.filename);
+    console.log('Existing attachments in DB:', existingFilenames);
+
+    // Read files from the folder
+    const filesInFolder = fs.readdirSync(fullFolderPath);
+    console.log('Files in folder:', filesInFolder);
+
+    // Find files that are NOT in the database
+    const missingFiles = filesInFolder.filter(filename =>
+      !existingFilenames.includes(filename) &&
+      !filename.startsWith('.') // Ignore hidden files
+    );
+    console.log('Missing files to add:', missingFiles);
+
+    if (missingFiles.length === 0) {
+      return res.json({
+        message: 'No missing attachments found',
+        existingCount: existingFilenames.length,
+        folderCount: filesInFolder.length
+      });
+    }
+
+    // Insert missing files into the database
+    const insertValues = missingFiles.map(filename => [
+      fileId,
+      `${folderPath}/${filename}`,
+      filename
+    ]);
+
+    const [insertResult] = await dbPromise.query(
+      'INSERT INTO attachments (file_id, path, filename) VALUES ?',
+      [insertValues]
+    );
+
+    console.log('✓ Attachments repaired!');
+    console.log('  Added:', insertResult.affectedRows, 'attachments');
+
+    res.json({
+      message: 'Attachments repaired successfully',
+      added: insertResult.affectedRows,
+      filenames: missingFiles,
+      totalNow: existingFilenames.length + missingFiles.length
+    });
+
+  } catch (err) {
+    console.error('Repair error:', err);
+    res.status(500).json({ error: 'Failed to repair attachments', details: err.message });
   }
 });
 
@@ -2026,6 +2424,60 @@ async function getCurrentFileNumber() {
   }
 }
 
+/**
+ * Generate a unique Document ID for scanned documents
+ * Format: {DEPT_CODE}/{SERIAL}/{YEAR} (e.g., OGS/062/2026)
+ * Uses a running sequence per department per year
+ */
+async function generateDocumentId(departmentCode) {
+  const connection = await dbPromise1.getConnection();
+  const deptCode = (departmentCode || 'UNKNOWN').toUpperCase();
+  const currentYear = new Date().getFullYear();
+
+  try {
+    await connection.beginTransaction();
+
+    // Check if department counter exists for this year, if not create it
+    const [existing] = await connection.query(
+      `SELECT count FROM document_counter WHERE department = ? AND year = ?`,
+      [deptCode, currentYear]
+    );
+
+    if (existing.length === 0) {
+      // Create new counter for this department and year
+      await connection.query(
+        `INSERT INTO document_counter (department, count, year) VALUES (?, 1, ?)`,
+        [deptCode, currentYear]
+      );
+      await connection.commit();
+      return `${deptCode}/001/${currentYear}`;
+    }
+
+    // Increment the counter atomically
+    await connection.query(
+      `UPDATE document_counter SET count = count + 1 WHERE department = ? AND year = ?`,
+      [deptCode, currentYear]
+    );
+
+    // Get the updated count
+    const [rows] = await connection.query(
+      `SELECT count FROM document_counter WHERE department = ? AND year = ?`,
+      [deptCode, currentYear]
+    );
+
+    const newCount = rows[0].count;
+    const formattedNumber = String(newCount).padStart(3, '0');
+
+    await connection.commit();
+    return `${deptCode}/${formattedNumber}/${currentYear}`;
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
 // (async () => {
 //   try {
 //     const newNumber = await generateFileNumber();
@@ -2090,25 +2542,41 @@ app.get("/api/debug-counter", async (req, res) => {
 
 app.get("/api/users", async (req, res) => {
   try {
-    const { department, section } = req.query;
-    let query = "SELECT * FROM signup";
+    const { department, section, role_code } = req.query;
+    let query = `
+      SELECT s.*, 
+             (SELECT GROUP_CONCAT(r.code) FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = s.id) as role_codes,
+             (SELECT GROUP_CONCAT(r.name) FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = s.id) as role_names
+      FROM signup s
+    `;
     const values = [];
     const conditions = [];
 
     if (department) {
-      conditions.push("department = ?");
+      conditions.push("LOWER(s.department) = LOWER(?)");
       values.push(department);
     }
     if (section) {
-      conditions.push("section = ?");
+      conditions.push("LOWER(s.section) = LOWER(?)");
       values.push(section);
+    }
+    if (role_code) {
+      // Check if any of the user's roles matches role_code
+      conditions.push(`
+        EXISTS (
+          SELECT 1 FROM user_roles ur 
+          JOIN roles r ON ur.role_id = r.id 
+          WHERE ur.user_id = s.id AND (LOWER(r.code) = LOWER(?) OR LOWER(r.name) = LOWER(?))
+        )
+      `);
+      values.push(role_code, role_code);
     }
 
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    query += " ORDER BY id ASC";
+    query += " ORDER BY s.id ASC";
 
     const [rows] = await dbPromise.query(query, values);
     res.status(200).json(rows);
@@ -2137,6 +2605,50 @@ app.delete("/api/users/:id", async (req, res) => {
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).json({ message: "Error deleting user" });
+  }
+});
+
+
+// Update user roles
+app.put("/api/users/:id/roles", async (req, res) => {
+  const { id } = req.params;
+  const { role_ids } = req.body; // Array of role IDs
+
+  if (!Array.isArray(role_ids)) {
+    return res.status(400).json({ message: "role_ids must be an array" });
+  }
+
+  try {
+    // Check if user exists
+    const [userCheck] = await dbPromise.query("SELECT id FROM signup WHERE id = ?", [id]);
+    if (userCheck.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Delete existing roles for this user
+    await dbPromise.query("DELETE FROM user_roles WHERE user_id = ?", [id]);
+
+    // Insert new roles
+    if (role_ids.length > 0) {
+      const values = role_ids.map(roleId => [id, roleId]);
+      await dbPromise.query("INSERT INTO user_roles (user_id, role_id) VALUES ?", [values]);
+    }
+
+    // Fetch updated roles for response
+    const [updatedRoles] = await dbPromise.query(`
+      SELECT r.id, r.name, r.code 
+      FROM user_roles ur 
+      JOIN roles r ON ur.role_id = r.id 
+      WHERE ur.user_id = ?
+    `, [id]);
+
+    res.status(200).json({
+      message: "User roles updated successfully",
+      roles: updatedRoles
+    });
+  } catch (error) {
+    console.error("Error updating user roles:", error);
+    res.status(500).json({ message: "Error updating user roles" });
   }
 });
 
@@ -2178,6 +2690,35 @@ app.post("/api/roles/:id/permissions", async (req, res) => {
   res.json({ message: "Role permissions updated successfully!" });
 });
 
+
+// Create a new role
+app.post("/api/roles", async (req, res) => {
+  const { name } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ message: "Role name is required" });
+  }
+
+  try {
+    // Check if role already exists
+    const [existing] = await dbPromise.query("SELECT * FROM roles WHERE name = ?", [name.trim().toLowerCase()]);
+
+    if (existing.length > 0) {
+      return res.status(400).json({ message: "Role already exists" });
+    }
+
+    // Insert new role
+    const [result] = await dbPromise.query("INSERT INTO roles (name) VALUES (?)", [name.trim().toLowerCase()]);
+
+    res.status(201).json({
+      message: "Role created successfully",
+      role: { id: result.insertId, name: name.trim().toLowerCase() }
+    });
+  } catch (error) {
+    console.error("Error creating role:", error);
+    res.status(500).json({ message: "Failed to create role" });
+  }
+});
 
 
 app.put("/api/files/:id/expire", async (req, res) => {
@@ -2591,10 +3132,17 @@ app.post("/upload", upload.array("files"), async (req, res) => {
         path: filePath,
       });
 
+      // Generate Document ID
+      let attDocId = null;
+      try {
+        // We might need to fetch the file's department if not provided
+        attDocId = await generateDocumentId('ATTACH');
+      } catch (e) { }
+
       // ⭐ INSERT INTO DATABASE
       await dbPromise.query(
-        "INSERT INTO attachments (file_id, filename, path) VALUES (?, ?, ?)",
-        [recordId, file.originalname, filePath]
+        "INSERT INTO attachments (file_id, filename, path, document_id) VALUES (?, ?, ?, ?)",
+        [recordId, file.originalname, filePath, attDocId]
       );
     }
 
@@ -2612,15 +3160,46 @@ app.post("/upload", upload.array("files"), async (req, res) => {
 
 
 
-app.post("/uploadStep2", uploadStep2.array("files", 10), (req, res) => {
-  const formattedFiles = req.files.map((file) => ({
-    filename: file.originalname,
-    // path: baseUrl + file.path.replace(/\\/g, "/"), // Fix Windows slashes
-  }));
-  res.json({
-    message: "Step 2 upload successful - department folder created",
-    files: formattedFiles
-  });
+app.post("/uploadStep2", uploadStep2.array("files", 10), async (req, res) => {
+  const { fileName, department } = req.body;
+  const safeFileName = fileName.replace(/[\/\\]/g, "-");
+
+  try {
+    // Find numeric file ID
+    const [fileRows] = await dbPromise.query("SELECT id FROM files WHERE file_id = ?", [fileName]);
+    const fileId = fileRows[0]?.id;
+
+    const formattedFiles = [];
+    for (const file of req.files) {
+      const filePath = `uploads/${safeFileName}/${department}/${file.filename}`;
+
+      // Generate Document ID
+      let attDocId = null;
+      try {
+        attDocId = await generateDocumentId(department || 'SYSTEM');
+      } catch (e) { }
+
+      if (fileId) {
+        await dbPromise.query(
+          "INSERT INTO attachments (file_id, filename, path, document_id) VALUES (?, ?, ?, ?)",
+          [fileId, file.filename, filePath, attDocId]
+        );
+      }
+
+      formattedFiles.push({
+        filename: file.originalname,
+        document_id: attDocId
+      });
+    }
+
+    res.json({
+      message: "Step 2 upload successful - inserted into database",
+      files: formattedFiles
+    });
+  } catch (err) {
+    console.error("Step 2 upload error:", err);
+    res.status(500).json({ message: "Step 2 upload failed" });
+  }
 });
 
 
@@ -2733,7 +3312,7 @@ app.post("/uploadStep2", uploadStep2.array("files", 10), (req, res) => {
 //     res.status(500).json({ message: "Failed to read attachments" });
 //   }
 // });
-app.get("/attachments/:fileName", (req, res) => {
+app.get("/attachments/:fileName", async (req, res) => {
   const fileName = decodeURIComponent(req.params.fileName);
   const safeFolderName = fileName.replace(/[\/\\]/g, "-");
 
@@ -2743,31 +3322,54 @@ app.get("/attachments/:fileName", (req, res) => {
     safeFolderName
   );
 
-  console.log("uploadsRoot:", uploadsRoot);
-  console.log("Exists:", fs.existsSync(uploadsRoot));
-
-  console.log("Raw contents:", fs.readdirSync(uploadsRoot, { withFileTypes: true }));
-
   if (!fs.existsSync(uploadsRoot)) {
     return res.json({});
   }
 
-  const result = {};
-  const departments = fs.readdirSync(uploadsRoot, { withFileTypes: true });
+  try {
+    // 1. Fetch from database to get document_id if available
+    const [fileRows] = await dbPromise.query("SELECT id FROM files WHERE file_id = ?", [fileName]);
+    const fileRecordId = fileRows[0]?.id;
 
-  departments.forEach(dept => {
-    if (!dept.isDirectory()) return;
+    let dbAttachments = [];
+    if (fileRecordId) {
+      [dbAttachments] = await dbPromise.query(
+        "SELECT filename, path, document_id FROM attachments WHERE file_id = ?",
+        [fileRecordId]
+      );
+    }
 
-    const deptPath = path.join(uploadsRoot, dept.name);
-    const files = fs.readdirSync(deptPath);
+    const dbMap = {};
+    dbAttachments.forEach(att => {
+      dbMap[att.filename] = att.document_id;
+    });
 
-    result[dept.name] = files.map(file => ({
-      file_name: file,
-      file_path: `/uploads/${safeFolderName}/${dept.name}/${file}`
-    }));
-  });
+    const result = {};
+    const departments = fs.readdirSync(uploadsRoot, { withFileTypes: true });
 
-  res.json(result);
+    departments.forEach(dept => {
+      if (!dept.isDirectory()) return;
+
+      const deptPath = path.join(uploadsRoot, dept.name);
+      const files = fs.readdirSync(deptPath);
+
+      result[dept.name] = files.map(file => {
+        // Try to find document_id in database by filename
+        const docId = dbMap[file] || null;
+
+        return {
+          file_name: file,
+          file_path: `/uploads/${safeFolderName}/${dept.name}/${file}`,
+          document_id: docId
+        };
+      });
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("Error fetching attachments:", err);
+    res.status(500).json({ message: "Failed to fetch attachments" });
+  }
 });
 
 
@@ -2775,24 +3377,88 @@ app.get("/attachments/:fileName", (req, res) => {
 app.put("/api/files/:id/status", async (req, res) => {
   console.log('id=================================================')
   const { id } = req.params;
-  const { status } = req.body;
-  // const userId = req.user.id;
+  const { status, approver_id, approver_name } = req.body;
   console.log('id==============', id, status)
 
-  const allowedStatuses = ["PENDING", "APPROVED", "REJECTED"];
+  const allowedStatuses = ["PENDING", "APPROVED", "REJECTED", "Query_Raised", "CLOSED"];
   if (!allowedStatuses.includes(status)) {
     return res.status(400).json({ message: "Invalid status" });
   }
 
-  await dbPromise.query(
-    `UPDATE files SET status = ? WHERE id = ?`,
-    [status, id]
-  );
+  try {
+    // Get file details to find who to notify
+    const [[file]] = await dbPromise.query(
+      "SELECT * FROM files WHERE id = ?",
+      [id]
+    );
 
-  res.status(200).json({
-    message: "File status updated successfully",
-    status
-  });
+    if (!file) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    // Update the file status
+    await dbPromise.query(
+      `UPDATE files SET status = ? WHERE id = ?`,
+      [status, id]
+    );
+
+    // Send notifications for APPROVED, REJECTED, or Query_Raised statuses
+    if (["APPROVED", "REJECTED", "Query_Raised"].includes(status)) {
+      const statusLabel = status === "Query_Raised" ? "returned with query" : status.toLowerCase();
+      const notificationMessage = `File "${file.file_id}" has been ${statusLabel} by ${approver_name || "Approval Authority"}.`;
+
+      // 1. Find all Administrators in the same department as the file
+      const [admins] = await dbPromise.query(`
+        SELECT DISTINCT s.id 
+        FROM signup s
+        JOIN user_roles ur ON s.id = ur.user_id
+        JOIN roles r ON ur.role_id = r.id
+        WHERE r.code = 'ADMIN' AND s.department = ?
+      `, [file.department]);
+
+      // 2. Find the session officer who last sent this file (the sender)
+      // The session officer is the one who forwarded the file to Approval Authority
+      // Check file_events for the last 'forwarded' or 'sent' event
+      const [lastForwardEvent] = await dbPromise.query(`
+        SELECT user_id FROM file_events 
+        WHERE file_id = ? AND event_type IN ('sent', 'forwarded')
+        ORDER BY created_at DESC LIMIT 1
+      `, [file.file_id]);
+
+      const usersToNotify = new Set();
+
+      // Add all administrators
+      admins.forEach(admin => usersToNotify.add(admin.id));
+
+      // Add the session officer who sent the file
+      if (lastForwardEvent.length > 0 && lastForwardEvent[0].user_id) {
+        usersToNotify.add(lastForwardEvent[0].user_id);
+      }
+
+      // Also notify the file creator if different
+      if (file.created_by_user_id) {
+        usersToNotify.add(file.created_by_user_id);
+      }
+
+      // Insert notifications for each user
+      for (const userId of usersToNotify) {
+        await dbPromise.query(`
+          INSERT INTO notifications (user_id, file_id, file_name, message, type, created_by_user_id)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `, [userId, file.id, file.file_id, notificationMessage, status, approver_id || null]);
+      }
+
+      console.log(`Notifications sent to ${usersToNotify.size} users for file ${file.file_id} status: ${status}`);
+    }
+
+    res.status(200).json({
+      message: "File status updated successfully",
+      status
+    });
+  } catch (error) {
+    console.error("Error updating file status:", error);
+    res.status(500).json({ message: "Error updating file status" });
+  }
 });
 
 
@@ -2833,23 +3499,28 @@ app.put("/api/files/:id/send", async (req, res) => {
     }
 
     // 3️⃣ Prevent re-sending - only DRAFT or pending files can be sent
-    if (file.status !== "DRAFT" && file.status !== "pending") {
-      return res.status(400).json({
-        message: "Only draft or pending files can be sent"
-      });
-    }
+    // if (file.status !== "DRAFT" && file.status !== "pending") {
+    //   return res.status(400).json({
+    //     message: "Only draft or pending files can be sent"
+    //   });
+    // }
 
     // 4️⃣ Update file routing - include target_user_id and target_section for user-level targeting
+    // Preserve APPROVED, REJECTED, Query_Raised and CLOSED status; only change DRAFT to pending
+    const newStatus = (file.status === 'APPROVED' || file.status === 'REJECTED' || file.status === 'Query_Raised' || file.status === 'CLOSED')
+      ? file.status
+      : 'pending';
+
     await dbPromise.query(
       `UPDATE files
        SET department = ?,
            receiver = ?,
            sender = ?,
-           status = 'pending',
+           status = ?,
            target_user_id = ?,
            target_section = ?
        WHERE id = ?`,
-      [toDepartment, toDepartment, file?.department, targetUserId || null, targetSection || null, id]
+      [toDepartment, toDepartment, file?.department, newStatus, targetUserId || null, targetSection || null, id]
     );
 
     // 5️⃣ (Optional but recommended) Audit log
@@ -2874,6 +3545,86 @@ app.put("/api/files/:id/send", async (req, res) => {
 });
 
 
+
+
+// ==================== NOTIFICATIONS API ====================
+
+// Get notifications for a user
+app.get("/api/notifications/:userId", async (req, res) => {
+  const { userId } = req.params;
+  const { limit = 20, unreadOnly } = req.query;
+
+  try {
+    let query = `
+      SELECT n.*, 
+             s.fullname as created_by_name,
+             s.username as created_by_username
+      FROM notifications n
+      LEFT JOIN signup s ON n.created_by_user_id = s.id
+      WHERE n.user_id = ?
+    `;
+
+    if (unreadOnly === 'true') {
+      query += ` AND n.is_read = FALSE`;
+    }
+
+    query += ` ORDER BY n.created_at DESC LIMIT ?`;
+
+    const [notifications] = await dbPromise.query(query, [userId, parseInt(limit)]);
+    res.json(notifications);
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ message: "Error fetching notifications" });
+  }
+});
+
+// Get unread notification count for a user
+app.get("/api/notifications/:userId/count", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const [[result]] = await dbPromise.query(
+      "SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE",
+      [userId]
+    );
+    res.json({ count: result.count });
+  } catch (error) {
+    console.error("Error fetching notification count:", error);
+    res.status(500).json({ message: "Error fetching notification count" });
+  }
+});
+
+// Mark a notification as read
+app.put("/api/notifications/:notificationId/read", async (req, res) => {
+  const { notificationId } = req.params;
+
+  try {
+    await dbPromise.query(
+      "UPDATE notifications SET is_read = TRUE WHERE id = ?",
+      [notificationId]
+    );
+    res.json({ message: "Notification marked as read" });
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
+    res.status(500).json({ message: "Error marking notification as read" });
+  }
+});
+
+// Mark all notifications as read for a user
+app.put("/api/notifications/:userId/read-all", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    await dbPromise.query(
+      "UPDATE notifications SET is_read = TRUE WHERE user_id = ?",
+      [userId]
+    );
+    res.json({ message: "All notifications marked as read" });
+  } catch (error) {
+    console.error("Error marking all notifications as read:", error);
+    res.status(500).json({ message: "Error marking all notifications as read" });
+  }
+});
 
 
 app.use((req, res, next) => {

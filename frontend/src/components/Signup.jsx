@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import Select from "react-select";
 import { useToast } from "../context/ToastContext";
 
 const Signup = () => {
@@ -11,7 +12,7 @@ const Signup = () => {
     department: "",
     section: "",
     designation: "",
-    role_id: "2", // default: staff
+    role_id: [], // default: empty array for multi-select
   });
 
   const BASE_URL = import.meta.env.VITE_API_URL
@@ -19,12 +20,14 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [sections, setSections] = useState([]);
+  const [roles, setRoles] = useState([]);
 
   // const [toast, setToast] = useState({ show: false, title: "", body: "" });
   const { showToast } = useToast();
 
   useEffect(() => {
     fetchDepartments();
+    fetchRoles();
   }, []);
 
   const fetchDepartments = async () => {
@@ -48,6 +51,16 @@ const Signup = () => {
     }
   };
 
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/roles`);
+      const data = await response.json();
+      setRoles(data);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+    }
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -60,6 +73,13 @@ const Signup = () => {
       }
       setFormData(prev => ({ ...prev, [e.target.name]: e.target.value, section: "" }));
     }
+  };
+
+  const handleRoleChange = (selectedOptions) => {
+    setFormData({
+      ...formData,
+      role_id: selectedOptions ? selectedOptions.map(option => option.value) : []
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -108,7 +128,7 @@ const Signup = () => {
           section: "",
           designation: "",
           password: "",
-          role_id: "2"
+          role_id: []
         });
         setSections([]);
 
@@ -260,15 +280,24 @@ const Signup = () => {
             />
           </div>
           <div className="mb-3">
-            <label className="form-label">Select Role</label>
-            <select name="role_id"
-              value={formData.role_id}
-              onChange={handleChange}
-              required>
-              <option value="1">Admin</option>
-              <option value="2">Staff</option>
-              <option value="3">Viewer</option>
-            </select>
+            <label className="form-label">Select Roles</label>
+            <Select
+              isMulti
+              name="role_id"
+              options={roles.map(role => ({
+                value: role.id,
+                label: role.name.charAt(0).toUpperCase() + role.name.slice(1)
+              }))}
+              className="basic-multi-select"
+              classNamePrefix="select"
+              value={roles.filter(r => formData.role_id.includes(r.id)).map(role => ({
+                value: role.id,
+                label: role.name.charAt(0).toUpperCase() + role.name.slice(1)
+              }))}
+              onChange={handleRoleChange}
+              placeholder="Select Roles"
+              required
+            />
           </div>
           <button type="submit" className="btn btn-primary w-100">
             Signup

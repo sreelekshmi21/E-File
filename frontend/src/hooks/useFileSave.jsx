@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function useFileSave({
     BASE_URL,
-    user,
     showToast,
     generateFileName
 }) {
+    const { user, hasRole } = useAuth();
     const navigate = useNavigate();
 
     /* ---------------------------------
@@ -18,13 +19,20 @@ export default function useFileSave({
         selectedUnit,
         setFileNumber,
         formData,
-        file
+        file,
+        existingAttachments = [], // Existing attachments from forwarded files
+        stayOnPage = false // New: if true, don't navigate away (for DESK users with DRAFT files)
     }) => {
         e.preventDefault();
 
+        // Check if user is Inward Desk ONLY (skip validation for file_subject)
+        // Users with multiple roles (e.g., INWARD + DESK) should use full validation
+        const isInwardDesk = hasRole('INWARD') && !hasRole('DESK');
+
         try {
             const file_subject = document.getElementById("file_subject")?.value;
-            if (!file_subject) {
+            // Only require file_subject for non-Inward Desk users
+            if (!isInwardDesk && !file_subject) {
                 showToast("File subject is required", "", "danger");
                 return;
             }
@@ -52,6 +60,18 @@ export default function useFileSave({
             formDatas.append("unit", selectedUnit?.value);
             formDatas.append("remarks", formData?.remarks || "");
             formDatas.append("created_by_user_id", user?.user?.id); // Track who created the file
+            formDatas.append("role_code", isInwardDesk ? 'INWARD' : (user?.user?.role_code || "")); // For Inward Desk detection - only pure INWARD users
+
+            // Include existing attachment IDs from forwarded files
+            console.log('=== DEBUG: Existing Attachments ===');
+            console.log('existingAttachments:', existingAttachments);
+            if (existingAttachments && existingAttachments.length > 0) {
+                const attachmentIds = existingAttachments.map(att => att.id).filter(id => id);
+                console.log('Extracted attachment IDs:', attachmentIds);
+                formDatas.append("existing_attachment_ids", JSON.stringify(attachmentIds));
+            } else {
+                console.log('No existing attachments to link');
+            }
 
             /* Attachments */
             // const files = document.getElementById("file")?.files || [];
@@ -78,11 +98,25 @@ export default function useFileSave({
                 })
             });
 
-            showToast("File created (Draft)", "", "success");
+            // Display success message with Document ID
+            const documentIdMessage = result.document_id
+                ? `Document ID: ${result.document_id}`
+                : "";
+            showToast("File created (Draft)", documentIdMessage, "success");
+
+            // If stayOnPage is true (DESK users with DRAFT), don't navigate away
+            // Return the result so caller can update state and stay on page
+            if (stayOnPage) {
+                return { success: true, result };
+            }
+
             // navigate(`/fileinbox`);
             navigate("/fileinbox", {
                 state: { activeTab: "created" }
             });
+
+            return { success: true, result };
+
 
         } catch (err) {
             console.error(err);
@@ -100,7 +134,7 @@ export default function useFileSave({
         selectedSection,
         selectedUser
     }) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
 
         if (!fileToEdit?.id) {
             showToast("Create file before sending", "", "warning");

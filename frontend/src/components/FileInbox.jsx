@@ -29,7 +29,7 @@ export default function FileInbox() {
   const [selectedFiles, setSelectedFiles] = useState([])
   const [selectAll, setSelectAll] = useState(false);
 
-  const { user } = useAuth();
+  const { user, hasRole, hasAnyRole, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState("received"); // or "created"
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -269,6 +269,23 @@ export default function FileInbox() {
     navigate('/viewpage', { state: { fileToEdit, data, viewMode: true } });
 
   }
+
+  // Handle File No column click - DESK users with pending files go to Create File page
+  const handleFileNoClick = async (file) => {
+    const data = await getAttachments(file?.id);
+
+    // DESK users with pending status only: go to Create File page with attachments
+    // Files with Query_Raised or any other status should go to View page
+    const isPending = file?.status?.toLowerCase() === 'pending';
+    if (hasRole('DESK') && isPending) {
+      navigate('/createfile', { state: { fileToEdit: file, data, viewMode: false } });
+    } else {
+      // All other cases (including Query_Raised, DRAFT, etc.): go to View page
+      localStorage.setItem("fileName", file?.file_id);
+      navigate('/viewpage', { state: { fileToEdit: file, data, viewMode: true } });
+    }
+  };
+
 
 
   const handleFilterByDept = async () => {
@@ -530,7 +547,7 @@ export default function FileInbox() {
                     loadFiles(selectedDepartment?.value || user?.user?.department, selectedDivision?.value, selectedUnit?.value, approvalStatus, 'created');
                   }}
                 >
-                  📤 Created Files
+                  📤 {hasRole('INWARD') && !hasRole('DESK') ? 'Created Attachments' : 'Created Files'}
                 </button>
 
                 <button
@@ -568,7 +585,7 @@ export default function FileInbox() {
                     );
                   }}
                 >
-                  📤 Forwarded Files
+                  📤 {hasRole('INWARD') && !hasRole('DESK') ? 'Forwarded Attachments' : 'Forwarded Files'}
                 </button>
               </div>
               <div className="row g-2 align-items-end">
@@ -676,7 +693,7 @@ export default function FileInbox() {
                       <th></th>
                       <th scope="col">#</th>
                       {/* <th scope="col">No.</th> */}
-                      <th scope="col">File No.</th>
+                      <th scope="col">{hasRole('INWARD') ? 'Attachment No.' : 'File No.'}</th>
                       <th scope="col">File Subject</th>
                       <th scope="col">Date Added</th>
                       {/* <th scope="col">InwardNum</th> */}
@@ -685,7 +702,7 @@ export default function FileInbox() {
                       {/* <th scope="col">Remarks</th> */}
                       <th scope="col">Status</th>
                       <th></th>
-                      {user?.user?.role_id == 1 && <th scope="col">Action</th>}
+                      {isAdmin() && <th scope="col">Action</th>}
                       <th></th>
                       <th scope="col">Document Expiry Timer</th>
                       <th scope="col">Track</th>
@@ -700,7 +717,7 @@ export default function FileInbox() {
 
                       return (
                         <tr key={file?.id} onClick={() => markAsRead(file.id)} className={`${!file.is_read ? "bg-yellow-100 font-semibold" : ""}`}>
-                          {user?.user?.role_id == 1 ? <td><div key={file.id}>
+                          {isAdmin() ? <td><div key={file.id}>
                             <input
                               type="checkbox"
                               checked={selectedFiles.includes(file.id)}
@@ -709,7 +726,7 @@ export default function FileInbox() {
 
                           </div></td> : <td></td>}
                           <td>{index + 1}</td>
-                          <td onClick={() => handleViewClick(file)} style={{ cursor: 'pointer' }} className={new Date(file?.date_added).toDateString() === new Date().toDateString() ? "highlight-today" : ""}>{file?.file_id}</td>
+                          <td onClick={() => handleFileNoClick(file)} style={{ cursor: 'pointer' }} className={new Date(file?.date_added).toDateString() === new Date().toDateString() ? "highlight-today" : ""}>{file?.file_id}</td>
                           {/* <td>{file?.file_name}</td> */}
                           {/* {console.log('file_sub', file?.file_subject)} */}
                           <td>{file?.file_subject}</td>
@@ -790,7 +807,7 @@ export default function FileInbox() {
                         </td>
                       </tr>
                     )}
-                    {user?.user?.role_id == 1 && <>
+                    {isAdmin() && <>
                       <tr><td><button onClick={handleBulkDelete}>BULK DELETE</button></td></tr>
                       <tr><td><input
                         type="checkbox"

@@ -10,17 +10,40 @@ export const AuthProvider = ({ children }) => {
 
   // Simulate login
   const login = (userData) => {
-    setUser(userData); // userData includes role
+    setUser(userData); // userData includes roles array
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
-   const logout = () => {
+  const logout = () => {
     setUser(null);
-     localStorage.removeItem('user');
+    localStorage.removeItem('user');
+  };
+
+  const hasRole = (roleCodeOrId) => {
+    if (!user || !user.user || !user.user.roles) return false;
+    return user.user.roles.some(role =>
+      role.code === roleCodeOrId || role.id == roleCodeOrId
+    );
+  };
+
+  const hasAnyRole = (roleCodesOrIds) => {
+    if (!user || !user.user || !user.user.roles) return false;
+    return user.user.roles.some(role =>
+      roleCodesOrIds.includes(role.code) || roleCodesOrIds.includes(role.id)
+    );
+  };
+
+  const isAdmin = () => {
+    if (!user || !user.user) return false;
+    return (
+      hasRole('ADMIN') ||
+      user.user.username === 'gs' ||
+      user.user.roles?.some(r => r.id == 8)
+    );
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, hasRole, hasAnyRole, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

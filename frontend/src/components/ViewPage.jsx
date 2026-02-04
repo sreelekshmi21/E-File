@@ -31,9 +31,35 @@ export default function ViewPage() {
   const [mainFileName, setMainFileName] = useState('')
 
   const [showModal, setShowModal] = useState(false);
+  const [documents, setDocuments] = useState(data || [])
+  const [showApprovalSuccessModal, setShowApprovalSuccessModal] = useState(false);
+  const [modalStep, setModalStep] = useState('confirm'); // 'confirm' or 'select_despatcher'
+  const [despatchersList, setDespatchersList] = useState([]);
+  const [selectedDespatcher, setSelectedDespatcher] = useState(null);
 
-
-  const [documents, setDocuments] = useState(data)
+  // Update documents when navigation state data changes
+  useEffect(() => {
+    console.log('ViewPage - navigation data:', data);
+    console.log('ViewPage - documents:', documents);
+    if (data && data.length > 0) {
+      setDocuments(data);
+    } else if (fileToEdit?.id) {
+      // Fallback: fetch attachments from backend if navigation data is missing
+      const fetchDocuments = async () => {
+        try {
+          const response = await fetch(`${BASE_URL}/api/attachments?file_id=${fileToEdit.id}`);
+          const attachmentsData = await response.json();
+          console.log('ViewPage - fetched attachments from backend:', attachmentsData);
+          if (attachmentsData && attachmentsData.length > 0) {
+            setDocuments(attachmentsData);
+          }
+        } catch (error) {
+          console.error('Failed to fetch attachments:', error);
+        }
+      };
+      fetchDocuments();
+    }
+  }, [data, fileToEdit?.id]);
 
 
   const [attachments, setAttachments] = useState({});
@@ -44,7 +70,7 @@ export default function ViewPage() {
 
   const [note, setNote] = useState('');
 
-  const { user } = useAuth();
+  const { user, hasRole, hasAnyRole } = useAuth();
 
   const { showToast } = useToast();
 
@@ -210,52 +236,55 @@ export default function ViewPage() {
       return;
     }
 
-    const mainFile = file[0];
-    //  setMainFileName(mainFile.name); 
-    //  const folderName = mainFile.name;
+    // Use fileToEdit?.file_id directly instead of localStorage for reliability
+    const fileName = fileToEdit?.file_id;
 
-    //  const fileName = file[0].name.split(".")[0]; 
-
-    //  alert(fileName)
-
-    const fileName = localStorage.getItem("fileName");
-
-    // const fileNameWithoutExt = mainFile.name.split(".").slice(0, -1).join(".");
+    if (!fileName) {
+      alert("File ID not available. Please try again.");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("fileName", fileName); // folder name = file name
-    // formData.append("recordId", fileToEdit?.id);
     formData.append("department", user?.user?.department);
-    file.forEach((file) => {
-      formData.append("files", file);
+    file.forEach((f) => {
+      formData.append("files", f);
     });
 
     try {
       const res = await fetch(`${BASE_URL}/uploadStep2`, {
         method: "POST",
-        body: formData, // <-- MUST be inside body
-        // ❌ DO NOT set Content-Type
+        body: formData,
       });
-      alert("File uploaded successfully")
+
       if (!res.ok) {
         throw new Error("Server returned " + res.status);
       }
 
       const data = await res.json();
+      console.log('Upload response with document IDs:', data);
 
-      console.log('first', data)
-
-      // Add uploaded files to UI list
-      // setDocuments((prev) => [...prev, ...data.files]);
+      // Show success message with document IDs
+      if (data.files && data.files.length > 0) {
+        const docIds = data.files.map(f => f.document_id).filter(Boolean);
+        if (docIds.length > 0) {
+          showToast(`Files uploaded successfully! Document IDs: ${docIds.join(', ')}`, '', 'success');
+        } else {
+          showToast('Files uploaded successfully!', '', 'success');
+        }
+      } else {
+        showToast('Files uploaded successfully!', '', 'success');
+      }
 
       // Reset selected files
       setFile([]);
       document.getElementById("fileInput").value = "";
 
+      // Refresh attachments to show the newly uploaded files with document IDs
       fetchAttachments(fileName);
     } catch (err) {
       console.error(err);
-      alert("Upload failed: " + err.message);
+      showToast("Upload failed: " + err.message, '', 'danger');
     }
   };
 
@@ -417,7 +446,6 @@ export default function ViewPage() {
 
   const { handleSendFile } = useFileSave({
     BASE_URL,
-    user,
     showToast
     // generateFileName
   });
@@ -480,10 +508,12 @@ export default function ViewPage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          // include auth header if you use JWT
-          // "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status,
+          approver_id: user?.user?.id,
+          approver_name: user?.user?.fullname || user?.user?.username
+        }),
       });
 
       if (!response.ok) {
@@ -493,10 +523,66 @@ export default function ViewPage() {
 
       const data = await response.json();
       console.log("Status updated:", data);
-      alert(`File ${status.toLowerCase()} successfully`);
+
+      if (status === 'APPROVED') {
+        setModalStep('confirm');
+        setShowApprovalSuccessModal(true);
+      } else {
+        showToast(`File ${status.toLowerCase()} successfully`, "", "success");
+      }
     } catch (err) {
       console.error("Error updating file status:", err);
-      alert(err.message);
+      showToast(err.message, "", "danger");
+    }
+  };
+
+  const handleApproveConfirm = async () => {
+    try {
+      console.log('Fetching despatchers for department:', user?.user?.department);
+      // Fetch users with 'DISPATCH' role in the logged in user's department
+      const response = await fetch(`${BASE_URL}/api/users?department=${encodeURIComponent(user?.user?.department)}&role_code=DISPATCH`);
+      const data = await response.json();
+      console.log('Despatchers data received:', data);
+
+      if (data && data.length > 0) {
+        const options = data.map(u => ({
+          value: u.id,
+          label: `${u.fullname || u.username} (${u.role_name || u.role_code || (u.username === 'gs' ? 'Admin' : 'Despatcher')})`,
+          department: u.department,
+          section: u.section
+        }));
+        setDespatchersList(options);
+        setModalStep('select_despatcher');
+      } else {
+        showToast("No Despatchers found in your department", "", "warning");
+        setShowApprovalSuccessModal(false);
+      }
+    } catch (err) {
+      console.error("Error fetching despatchers:", err);
+      showToast("Failed to fetch despatchers", "", "danger");
+    }
+  };
+
+  const handleSendToDespatcher = async () => {
+    if (!selectedDespatcher) {
+      showToast("Please select a despatcher", "", "warning");
+      return;
+    }
+
+    try {
+      const result = await handleSendFile({
+        fileToEdit,
+        selectedReceiver: { value: selectedDespatcher.department }, // Department code
+        selectedSection: { value: selectedDespatcher.section },
+        selectedUser: { value: selectedDespatcher.value } // User ID
+      });
+
+      if (result?.success) {
+        setShowApprovalSuccessModal(false);
+        // showToast("File forwarded to Despatch Desk", "", "success");
+      }
+    } catch (err) {
+      console.error("Error sending to despatcher:", err);
     }
   };
 
@@ -556,11 +642,11 @@ export default function ViewPage() {
         <div className="row">
           <div className="col-12">
             <div>File Matter: <span dangerouslySetInnerHTML={{ __html: fileToEdit?.remarks || '' }} /></div>
-            <div>{fileToEdit?.file_subject}</div>
+            <div>File Subject: {fileToEdit?.file_subject}</div>
             <div className="attachments-box fw-bold">
               <h4>{`${fileToEdit?.file_id} ${fileToEdit?.department} Initial Attachments`}</h4>
               <div className="attachments-container files-section">
-                {documents.map((doc) => (
+                {documents?.map((doc) => (
                   <div
                     key={doc.id}
                     className="attachment-item"
@@ -590,7 +676,7 @@ export default function ViewPage() {
                     </div>
 
                     {/* 📄 File name */}
-                    <p className="file-name">{doc.filename}</p>
+                    <p className="file-name">{doc.document_id ? `[${doc.document_id}] ` : ""}{doc.filename}</p>
                     <p>Click the FileName to  open the file</p>
                   </div>
                 ))}
@@ -652,7 +738,7 @@ export default function ViewPage() {
                                     <div className="file-icon" style={{ fontSize: '2rem' }}>📄</div>
                                   )}
                                 </div>
-                                <div className="file-name">{file.file_name}</div>
+                                <div className="file-name">{file.document_id ? `[${file.document_id}] ` : ""}{file.file_name}</div>
                               </a>
                             );
                           })}
@@ -855,7 +941,7 @@ export default function ViewPage() {
             {!isFileOwner && <div className="alert alert-info mt-3">
               <strong>Read-only:</strong> This file is currently with another department. You can view it but cannot forward or edit.
             </div>}
-            {user?.user?.role_id == 1 && <div className="d-flex justify-content-center gap-3 mt-3">
+            {hasAnyRole(['APPROVER', 'ADMIN']) && <div className="d-flex justify-content-center gap-3 mt-3">
               <button
                 className="btn btn-success d-flex align-items-center gap-2"
                 onClick={() => updateFileStatus(fileToEdit?.id, "APPROVED")}>
@@ -868,6 +954,21 @@ export default function ViewPage() {
                 onClick={() => updateFileStatus(fileToEdit?.id, "REJECTED")}>
                 <i className="bi bi-x-circle"></i>
                 Reject
+              </button>
+
+              <button
+                className="btn btn-warning d-flex align-items-center gap-2"
+                onClick={() => updateFileStatus(fileToEdit?.id, "Query_Raised")}>
+                <i className="bi bi-question-circle"></i>
+                Return with Query
+              </button>
+            </div>}
+            {hasRole('DISPATCH') && <div className="d-flex justify-content-center mt-3">
+              <button
+                className="btn btn-dark d-flex align-items-center gap-2"
+                onClick={() => updateFileStatus(fileToEdit?.id, "CLOSED")}>
+                <i className="bi bi-check2-square"></i>
+                Mark as Closed
               </button>
             </div>}
             <div className="container d-flex justify-content-between">
@@ -899,6 +1000,32 @@ export default function ViewPage() {
         confirmText="Send High Priority Request"
         confirmVariant="danger"
         onConfirm={() => confirmHighPriority(fileToEdit?.id)} />}
+
+      {showApprovalSuccessModal && (
+        <ReusableModal
+          showModal={showApprovalSuccessModal}
+          setShowModal={setShowApprovalSuccessModal}
+          title={modalStep === 'confirm' ? "Approval Successful" : "Select Despatcher"}
+          headerClass="bg-success"
+          message={modalStep === 'confirm' ? "File approved successfully. Do you want to send this file to Despatch Desk?" : "Choose a Despatcher to forward the file:"}
+          confirmText={modalStep === 'confirm' ? "YES" : "Send"}
+          cancelText={modalStep === 'confirm' ? "NO" : "Cancel"}
+          confirmVariant="success"
+          onConfirm={modalStep === 'confirm' ? handleApproveConfirm : handleSendToDespatcher}
+        >
+          {modalStep === 'select_despatcher' && (
+            <div className="mt-3">
+              <Select
+                options={despatchersList}
+                value={selectedDespatcher}
+                onChange={setSelectedDespatcher}
+                placeholder="Select a Despatcher..."
+                isSearchable={true}
+              />
+            </div>
+          )}
+        </ReusableModal>
+      )}
     </>
   );
 }
