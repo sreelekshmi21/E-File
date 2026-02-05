@@ -1259,8 +1259,12 @@ app.post(
           // Generate Document ID for this attachment
           let attachmentDocId = null;
           if (isInwardDesk) {
-            // For Inward Desk: all attachments share the same file number as their Document ID
-            attachmentDocId = effectiveFileId;
+            // For Inward Desk: generate unique Document ID for each attachment
+            try {
+              attachmentDocId = await generateDocumentId(sender || department || 'INWARD');
+            } catch (docErr) {
+              console.error("Error generating Inward Desk attachment document ID:", docErr);
+            }
           } else {
             try {
               attachmentDocId = await generateDocumentId(sender || department || 'SYSTEM');
