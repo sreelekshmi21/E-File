@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-export default function Toast({ show, title, body, onClose, variant = "success"}) {
+export default function Toast({ show, title, body, onClose, variant = "success" }) {
   useEffect(() => {
     if (show) {
       const timer = setTimeout(onClose, 3000); // auto close after 3s

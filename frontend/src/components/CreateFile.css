@@ -1,0 +1,496 @@
+/* ===== Create File Page - Modern UI Styles ===== */
+
+/* CSS Variables */
+.create-file-page {
+    --primary: #2563EB;
+    --primary-hover: #1D4ED8;
+    --primary-light: #EFF6FF;
+    --success: #10B981;
+    --success-hover: #059669;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --gray-50: #F8FAFC;
+    --gray-100: #F1F5F9;
+    --gray-200: #E2E8F0;
+    --gray-300: #CBD5E1;
+    --gray-400: #94A3B8;
+    --gray-500: #64748B;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1E293B;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --transition: all 0.2s ease;
+}
+
+/* Page Container */
+.create-file-page {
+    background: var(--gray-50);
+    min-height: 100vh;
+    padding: 24px;
+}
+
+/* Page Header */
+.create-file-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 3px solid var(--primary);
+}
+
+.create-file-header h4 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.create-file-header h4::before {
+    content: "📄";
+    font-size: 1.25rem;
+}
+
+/* Card Base */
+.cf-card {
+    background: #FFFFFF;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid var(--gray-200);
+    transition: var(--transition);
+}
+
+.cf-card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+/* Card Header */
+.cf-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--primary-light);
+}
+
+.cf-card-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.cf-card-header .icon {
+    font-size: 1.25rem;
+}
+
+/* Form Grid */
+.cf-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.cf-form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.cf-form-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 768px) {
+
+    .cf-form-grid-2,
+    .cf-form-grid-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Form Group */
+.cf-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cf-form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Modern Input Styling */
+.cf-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    color: var(--gray-800);
+    background: #FFFFFF;
+    transition: var(--transition);
+}
+
+.cf-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.cf-input:disabled {
+    background: var(--gray-100);
+    color: var(--gray-500);
+    cursor: not-allowed;
+}
+
+/* File Number Highlight */
+.cf-file-number {
+    background: var(--primary-light) !important;
+    border-color: var(--primary) !important;
+    font-weight: 600;
+    color: var(--primary) !important;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* React Select Custom Styling */
+.cf-form-group .react-select__control {
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    min-height: 44px;
+    transition: var(--transition);
+}
+
+.cf-form-group .react-select__control:hover {
+    border-color: var(--gray-300);
+}
+
+.cf-form-group .react-select__control--is-focused {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Attachments Drop Zone */
+.cf-dropzone {
+    border: 2px dashed var(--gray-300);
+    border-radius: var(--radius);
+    padding: 32px;
+    text-align: center;
+    background: var(--gray-50);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.cf-dropzone:hover {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.cf-dropzone-active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.cf-dropzone-icon {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    color: var(--gray-400);
+}
+
+.cf-dropzone-text {
+    color: var(--gray-500);
+    font-size: 0.95rem;
+}
+
+.cf-dropzone-text strong {
+    color: var(--primary);
+    cursor: pointer;
+}
+
+/* File Chips */
+.cf-file-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.cf-file-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--gray-100);
+    border-radius: 20px;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-200);
+    transition: var(--transition);
+}
+
+.cf-file-chip:hover {
+    background: var(--gray-200);
+}
+
+.cf-file-chip .file-icon {
+    color: var(--primary);
+}
+
+.cf-file-chip .file-name {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cf-file-chip .file-remove {
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+    transition: var(--transition);
+}
+
+.cf-file-chip .file-remove:hover {
+    color: var(--danger);
+}
+
+/* Existing Attachments List */
+.cf-attachments-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.cf-attachments-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--gray-50);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    border: 1px solid var(--gray-200);
+    transition: var(--transition);
+}
+
+.cf-attachments-list li:hover {
+    background: var(--gray-100);
+}
+
+.cf-attachments-list a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cf-attachments-list a:hover {
+    text-decoration: underline;
+}
+
+/* Action Buttons */
+.cf-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--gray-200);
+}
+
+.cf-btn {
+    padding: 12px 32px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cf-btn-primary {
+    background: var(--primary);
+    color: #FFFFFF;
+}
+
+.cf-btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+.cf-btn-success {
+    background: var(--success);
+    color: #FFFFFF;
+}
+
+.cf-btn-success:hover {
+    background: var(--success-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+.cf-btn-secondary {
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+.cf-btn-secondary:hover {
+    background: var(--gray-300);
+}
+
+.cf-btn-danger {
+    background: var(--danger);
+    color: #FFFFFF;
+}
+
+.cf-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Department Header Banner */
+.cf-department-banner {
+    text-align: center;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+    color: #FFFFFF;
+    border-radius: var(--radius-sm);
+    margin-bottom: 20px;
+}
+
+.cf-department-banner h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* Rich Text Editor Container */
+.cf-editor-container {
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.cf-editor-container:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Timeline Button */
+.cf-timeline-btn {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--gray-300);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+
+.cf-timeline-btn:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-400);
+}
+
+/* Inward Desk Upload Section */
+.cf-inward-upload {
+    text-align: center;
+    padding: 40px;
+}
+
+.cf-inward-alert {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 24px;
+    background: var(--primary-light);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-sm);
+    color: var(--primary);
+    font-weight: 500;
+    margin-bottom: 32px;
+}
+
+/* Comments Section */
+.cf-comments-section {
+    background: #FFFFFF;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-top: 20px;
+}
+
+.cf-comment-card {
+    background: var(--gray-50);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin-bottom: 12px;
+    border-left: 4px solid var(--primary);
+}
+
+.cf-comment-card h5 {
+    margin: 0 0 8px 0;
+    color: var(--gray-800);
+}
+
+.cf-comment-card p {
+    margin: 0;
+    color: var(--gray-600);
+    font-size: 0.875rem;
+}
+
+.cf-comment-card span {
+    font-size: 0.8rem;
+    color: var(--gray-400);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .create-file-page {
+        padding: 16px;
+    }
+
+    .cf-card {
+        padding: 16px;
+    }
+
+    .cf-actions {
+        flex-direction: column;
+    }
+
+    .cf-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

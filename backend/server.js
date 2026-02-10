@@ -1,4 +1,5 @@
 require('dotenv').config();
+const bcrypt = require("bcrypt");
 const SECRET_KEY = process.env.JWT_SECRET;
 
 const express = require("express");
@@ -498,14 +499,14 @@ app.post("/signup", async (req, res) => {
       }
 
       // Hash password before storing
-      // const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash(password, 10);
 
       // Insert user
       const insertQuery =
         "INSERT INTO signup (fullname, username, passwd, email, department, section, designation, role_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
       db.query(
         insertQuery,
-        [fullname, username, password, email, department, req.body.section, designation, Array.isArray(role_id) ? role_id[0] : role_id],
+        [fullname, username, hashedPassword, email, department, req.body.section, designation, Array.isArray(role_id) ? role_id[0] : role_id],
         async (err, result) => {
           if (err) {
             console.error("Insert error:", err);
@@ -606,8 +607,8 @@ app.post("/login", async (req, res) => {
   try {
     // ✅ Use promise-based query instead of callback
     const [results] = await db.promise().query(
-      "SELECT * FROM signup WHERE username = ? AND passwd = ?",
-      [username, password]
+      "SELECT * FROM signup WHERE username = ?",
+      [username]
     );
 
     if (results.length === 0) {
@@ -615,6 +616,30 @@ app.post("/login", async (req, res) => {
     }
 
     const user = results[0];
+
+    let isValid = false;
+
+    // Check if password is already hashed (bcrypt hashes start with $2b$)
+    if (user.passwd && user.passwd.startsWith("$2b$")) {
+      isValid = await bcrypt.compare(password, user.passwd);
+    } else {
+      // Plain text comparison for old users
+      isValid = password === user.passwd;
+
+      // If correct, migrate to hashed password automatically
+      if (isValid) {
+        const hashed = await bcrypt.hash(password, 10);
+
+        await db.promise().query(
+          "UPDATE signup SET passwd = ? WHERE id = ?",
+          [hashed, user.id]
+        );
+      }
+    }
+
+    if (!isValid) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
 
     // ✅ Fetch all roles for the user
     const [userRoles] = await db.promise().query(

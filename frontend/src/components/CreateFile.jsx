@@ -10,6 +10,7 @@ import Select from 'react-select';
 import RemarksEditor from './RemarksEditor';
 import ReusableModal from '../utils/ReusableModal';
 import useFileSave from "../hooks/useFileSave";
+import './CreateFile.css';
 
 
 
@@ -1116,288 +1117,236 @@ export default function CreateFile() {
       {/* Mobile Header */}
       <MobileHeader onMenuToggle={() => setSidebarOpen(true)} />
 
-      <div className="container-fluid mt-4">
-        <div className="row">
-          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-          {/* Left Column - Form */}
-          {/* <div className="col-md-5 bg-light border p-4"><div className="row mb-3">
-            <label>Notes</label>
-            {notes.map(note => (
-              <div key={note?.id} className="note-block">
-                <p>{note?.note}</p>
-                <small>
-                  — <strong>{note?.username}</strong>, {new Date(note?.created_at).toLocaleString()}
-                </small>
+      <div className="create-file-page">
+        <div className="container-fluid">
+          <div className="row">
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+            <div className="col-md-10 col-lg-10">
+              {/* Modern Header */}
+              <div className="create-file-header">
+                <h4>
+                  {isInwardDesk
+                    ? 'SCAN & UPLOAD DOCUMENT'
+                    : (fileToEdit?.id ? 'FILE DETAILS' : 'CREATE NEW FILE')}
+                </h4>
+                {fileToEdit?.id && (
+                  <button
+                    className="cf-timeline-btn"
+                    onClick={() => handleTimeline(fileToEdit)}
+                  >
+                    📅 File Timeline
+                  </button>
+                )}
               </div>
-            ))}
 
-            <textarea name="note" id="note" className="form-control"
-              rows="20"
-              value={note}
-              onChange={handleChangeNote}
-              disabled={viewMode}></textarea>
-            <button className="btn btn-primary mt-3" onClick={handleSaveNote}>
-              Add Note
-            </button>
-          </div></div> */}
-          <div className="col-md-10 bg-light border p-4">
-            {/* Header - different for Inward Desk */}
-            <div className="d-flex align-items-center mb-4">
-              <h4 className="text-center flex-grow-1 m-0">
-                {isInwardDesk
-                  ? 'SCAN & UPLOAD DOCUMENT'
-                  : (fileToEdit?.id ? 'FILE DETAILS' : 'CREATE FILE')}
-              </h4>
-            </div>
+              {/* Inward Desk simplified UI - only attachment upload */}
+              {isInwardDesk ? (
+                <div className="inward-desk-upload">
+                  <div className="alert alert-info mb-4">
+                    <strong>Inward Desk:</strong> Scan physical documents and upload to create a Document ID.
+                  </div>
 
-            {/* Inward Desk simplified UI - only attachment upload */}
-            {isInwardDesk ? (
-              <div className="inward-desk-upload">
-                <div className="alert alert-info mb-4">
-                  <strong>Inward Desk:</strong> Scan physical documents and upload to create a Document ID.
-                </div>
-
-                {/* Attachments section for Inward Desk */}
-                <div className="row mb-4">
-                  <div className="col-md-12">
-                    <div className="attachments-wrapper">
-                      <label className="attachments-label"><strong>Scan & Attach Documents:</strong></label>
-                      <div className="attachments-row mt-2">
-                        <label htmlFor="fileInput" className="btn btn-primary btn-lg">
-                          <i className="bi bi-upload me-2"></i> Choose Files to Upload
-                        </label>
-                        <input
-                          type="file"
-                          id="fileInput"
-                          multiple
-                          hidden
-                          onChange={handleFileChange}
-                          accept=".pdf,.jpg,.jpeg,.png,.tiff,.doc,.docx"
-                        />
-                        {file.map((f, index) => (
-                          <div key={index} className="file-chip">
-                            <span className="file-name" title={f.name}>{f.name}</span>
-                            <button
-                              type="button"
-                              className="file-remove"
-                              onClick={() => removeFile(index)}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
+                  {/* Attachments section for Inward Desk */}
+                  <div className="row mb-4">
+                    <div className="col-md-12">
+                      <div className="attachments-wrapper">
+                        <label className="attachments-label"><strong>Scan & Attach Documents:</strong></label>
+                        <div className="attachments-row mt-2">
+                          <label htmlFor="fileInput" className="btn btn-primary btn-lg">
+                            <i className="bi bi-upload me-2"></i> Choose Files to Upload
+                          </label>
+                          <input
+                            type="file"
+                            id="fileInput"
+                            multiple
+                            hidden
+                            onChange={handleFileChange}
+                            accept=".pdf,.jpg,.jpeg,.png,.tiff,.doc,.docx"
+                          />
+                          {file.map((f, index) => (
+                            <div key={index} className="file-chip">
+                              <span className="file-name" title={f.name}>{f.name}</span>
+                              <button
+                                type="button"
+                                className="file-remove"
+                                onClick={() => removeFile(index)}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Subject field for Inward Desk - minimal info */}
-                <div className="row mb-3">
-                  <div className="col-md-12">
-                    <label className="form-label" htmlFor="file_subject"><strong>Document Subject:</strong></label>
-                    <input
-                      type="text"
-                      name="file_subject"
-                      id="file_subject"
-                      className="form-control form-control-lg"
-                      placeholder="Enter document subject/description"
-                      value={formData.file_subject}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-
-                {/* Upload button for Inward Desk */}
-                <div className="d-flex justify-content-center mt-4">
-                  <form onSubmit={(e) =>
-                    handleCreateFile({
-                      e,
-                      mode: "create",
-                      formData,
-                      fileToEdit: null,
-                      selectedDepartment,
-                      selectedReceiver: null,
-                      selectedDivision,
-                      selectedUnit,
-                      approvalStatus: 'DRAFT',
-                      fileName,
-                      setFileNumber,
-                      file,
-                      existingAttachments: attachments, // Pass forwarded attachments
-                      stayOnPage: true // INWARD desk: stay on page with attachments until file is fully created
-                    })
-                  }>
-                    <button
-                      className="btn btn-success btn-lg px-5"
-                      type="submit"
-                      disabled={file.length === 0}
-                    >
-                      <i className="bi bi-cloud-upload me-2"></i>
-                      Upload & Generate Document ID
-                    </button>
-                  </form>
-                </div>
-              </div>
-            ) : (
-              /* Regular user UI - full form */
-              <>
-                {/* Your Form Rows Go Here (already formatted in previous reply) */}
-                {/* Example Row */}
-                <div className="row mb-3">
-                  <div className="col-md-6 d-flex align-items-center gap-2">
-                    <label className="form-label mb-0" htmlFor="department">Department</label>
-                    <Select
-                      options={departments}
-                      value={selectedDepartment}
-                      onChange={(selectedOption) => setSelectedDepartment(selectedOption)}
-                      isSearchable={true}
-                      placeholder="Search or Select Department"
-                      isDisabled={true}
-                    />
-                    {/* <select
-              value={selectedDepartment || ''}
-             onChange={(e) => {
-   
-    setSelectedDepartment(e.target.value);
-  }}
-               required
-               id="department"
-               name="department"
-               disabled={viewMode}>
-  <option value="">-- Select Department --</option>
-  {departments?.map((dept) => (
-    <option key={dept.id} value={dept.code}>
-      {dept?.dept_name} ({dept.code})
-    </option>
-  ))}
-</select> */}
+                  {/* Subject field for Inward Desk - minimal info */}
+                  <div className="row mb-3">
+                    <div className="col-md-12">
+                      <label className="form-label" htmlFor="file_subject"><strong>Document Subject:</strong></label>
+                      <input
+                        type="text"
+                        name="file_subject"
+                        id="file_subject"
+                        className="form-control form-control-lg"
+                        placeholder="Enter document subject/description"
+                        value={formData.file_subject}
+                        onChange={handleChange}
+                      />
+                    </div>
                   </div>
 
+                  {/* Upload button for Inward Desk */}
+                  <div className="d-flex justify-content-center mt-4">
+                    <form onSubmit={(e) =>
+                      handleCreateFile({
+                        e,
+                        mode: "create",
+                        formData,
+                        fileToEdit: null,
+                        selectedDepartment,
+                        selectedReceiver: null,
+                        selectedDivision,
+                        selectedUnit,
+                        approvalStatus: 'DRAFT',
+                        fileName,
+                        setFileNumber,
+                        file,
+                        existingAttachments: attachments, // Pass forwarded attachments
+                        stayOnPage: true // INWARD desk: stay on page with attachments until file is fully created
+                      })
+                    }>
+                      <button
+                        className="btn btn-success btn-lg px-5"
+                        type="submit"
+                        disabled={file.length === 0}
+                      >
+                        <i className="bi bi-cloud-upload me-2"></i>
+                        Upload & Generate Document ID
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ) : (
+                /* Regular user UI - full form */
+                <>
+                  {/* Metadata Card */}
+                  <div className="cf-card">
+                    <div className="cf-card-header">
+                      <span className="icon">🏢</span>
+                      <h5>File Metadata</h5>
+                    </div>
+                    <div className="cf-form-grid-4">
+                      <div className="cf-form-group">
+                        <label htmlFor="department">Department</label>
+                        <Select
+                          options={departments}
+                          value={selectedDepartment}
+                          onChange={(selectedOption) => setSelectedDepartment(selectedOption)}
+                          isSearchable={true}
+                          placeholder="Select Department"
+                          isDisabled={true}
+                          classNamePrefix="react-select"
+                        />
+                      </div>
+                      <div className="cf-form-group">
+                        <label htmlFor="division">Division</label>
+                        <Select
+                          options={divisions}
+                          value={selectedDivision}
+                          onChange={handleDivisionChange}
+                          isSearchable={true}
+                          placeholder="Select Division"
+                          classNamePrefix="react-select"
+                        />
+                      </div>
+                      <div className="cf-form-group">
+                        <label htmlFor="unit">Unit</label>
+                        <Select
+                          key={`units-${selectedDivision?.id || 'none'}-${units.length}`}
+                          options={units}
+                          value={selectedUnit}
+                          onChange={handleUnitChange}
+                          isSearchable={true}
+                          placeholder={units.length > 0 ? `Select Unit (${units.length})` : "Select Unit"}
+                          isDisabled={viewMode && !(user?.user?.role_code === 'DESK' && fileToEdit?.status === 'pending')}
+                          menuPortalTarget={document.body}
+                          styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                          classNamePrefix="react-select"
+                        />
+                      </div>
+                      <div className="cf-form-group">
+                        <label htmlFor="file_no">No.</label>
+                        <input
+                          type="text"
+                          name="file_no"
+                          id="file_no"
+                          className="cf-input"
+                          value={fileNumber}
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                  <div className="col-md-6 d-flex align-items-center gap-2">
-                    <label className="form-label mb-0" htmlFor="division">Divisions</label>
-                    {/* <select
-              value={selectedDivision}
-             onChange={(e) => setSelectedDivision(e.target.value)}
-               required
-               id="division"
-               name="division"
-               disabled={viewMode}
-          >
- 
-   <option value="">-- Select Division --</option>
-  {divisions.map((division, idx) => (
-    <option key={idx} value={division.code}>
-      {division.name} ({division.code})
-    </option>
-  ))}
-</select> */}
-                    <Select
-                      options={divisions}
-                      value={selectedDivision}
-                      onChange={handleDivisionChange}
-                      isSearchable={true}
-                      placeholder="Divisions"
-                    // isDisabled={viewMode && !(user?.user?.role_code === 'DESK' && fileToEdit?.status === 'pending')}
-                    // isDisabled={true}
-                    />
-                  </div>
-                </div>
-                <div className="row mb-3">
-                  <div className="col-md-6 d-flex align-items-center gap-2">
-                    <label className="form-label mb-0" htmlFor="unit">Units</label>
-                    {console.log('Units Select rendering with options:', units.length, 'units')}
-                    <Select
-                      key={`units-${selectedDivision?.id || 'none'}-${units.length}`}
-                      options={units}
-                      value={selectedUnit}
-                      onChange={handleUnitChange}
-                      isSearchable={true}
-                      placeholder={units.length > 0 ? `Select Unit (${units.length} available)` : "Units"}
-                      isDisabled={viewMode && !(user?.user?.role_code === 'DESK' && fileToEdit?.status === 'pending')}
-                      menuPortalTarget={document.body}
-                      styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
-                    />
-                    {units.length > 0 && <small className="text-success ms-2">({units.length} units loaded)</small>} {/* <select
-              value={selectedUnit}
-             onChange={(e) => setSelectedUnit(e.target.value)}
-               required
-               id="unit"
-               name="unit"
-               disabled={viewMode}
-          >
- 
-   <option value="">-- Select Unit --</option>
-  {units.map((unit, idx) => (
-    <option key={idx} value={unit.code}>
-      {unit.name} ({unit.code})
-    </option>
-  ))}
-</select> */}
-                  </div>
-                  <div className="col-md-6 d-flex align-items-center gap-2">
-                    <label className="form-label mb-0" htmlFor="file_no">No.:</label>
-                    <input type="text" name="file_no" id="file_no" className="form-control" value={fileNumber} readOnly />
-                  </div>
-                </div>
-                <div className="row mb-3">
-                  <div className="col-md-12 d-flex justify-content-center">
-                    <h2 className="text-center mb-4 fw-bold">
-                      {departments?.find((dept) => dept?.label === selectedDepartment?.label)?.label}
-                    </h2>
-                  </div>
-                </div>
-                <div className="row mb-3">
-                  <div className="col-md-12 d-flex align-items-center gap-2">
-                    <label className="form-label mb-0" htmlFor="file_id">File Number:</label>
-                    <input type="text" name="file_id" id="file_id" className="form-control" value={fileName}
-                      onChange={handleChange}
-                      disabled={true} />
-                  </div>
-                </div>
-                {/* <div className="col-md-4 d-flex align-items-center gap-2">
-          <label className="form-label mb-0" htmlFor="file_subject">File Subject:</label>
-          <input type="text" name="file_subject" id="file_subject" className="form-control" value={formData.file_subject} onChange={handleChange} />
-        </div> */}
+                  {/* Department Banner */}
+                  {selectedDepartment && (
+                    <div className="cf-department-banner">
+                      <h2>{departments?.find((dept) => dept?.label === selectedDepartment?.label)?.label}</h2>
+                    </div>
+                  )}
 
-                {/* Row 2 */}
-                <div className="row mb-3">
-                  <div className="col-md-12 d-flex align-items-center gap-2">
-                    <label className="form-label mb-0" htmlFor="file_subject">File Subject:</label>
-                    <input type="text" name="file_subject" id="file_subject" className="form-control" value={formData.file_subject} onChange={handleChange} disabled={viewMode} />
-                  </div>
-                  {/* <div className="col-md-6 d-flex align-items-center gap-2">
-      <label className="form-label mb-0" htmlFor="sender">Originator:</label>
-      <input type="text" name="sender" id="sender" className="form-control" value={formData.sender} onChange={handleChange} disabled={viewMode}/>
-    </div> */}
-                  {/* <div className="col-md-4 d-flex align-items-center gap-2">
-      <label className="form-label mb-0" htmlFor="file_recipient">Recipient:</label>
-      <input type="text" name="file_recipient" id="file_recipient" className="form-control" value={formData.file_recipient} onChange={handleChange} />
-    </div> */}
-                  {/* <div className="col-md-4 d-flex align-items-center gap-2">
-      <label className="form-label mb-0" htmlFor="date">Date:</label>
-      <input type="date" name="date" id="date" className="form-control" value={formData.date} onChange={handleChange} />
-    </div> */}
-                </div>
-                <div className="col-md-12">
-                  <label className="form-label" htmlFor="remarks">File Matter:</label>
-                  {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
-                  <RemarksEditor formData={formData} setFormData={setFormData}
-                    viewMode={viewMode} />
-                  {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
+                  {/* File Information Card */}
+                  <div className="cf-card">
+                    <div className="cf-card-header">
+                      <span className="icon">📁</span>
+                      <h5>File Information</h5>
+                    </div>
+                    <div className="cf-form-group" style={{ marginBottom: '16px' }}>
+                      <label htmlFor="file_id">📄 File Number</label>
+                      <input
+                        type="text"
+                        name="file_id"
+                        id="file_id"
+                        className="cf-input cf-file-number"
+                        value={fileName}
+                        onChange={handleChange}
+                        disabled={true}
+                      />
+                    </div>
+                    <div className="cf-form-group" style={{ marginBottom: '16px' }}>
+                      <label htmlFor="file_subject">📝 File Subject</label>
+                      <input
+                        type="text"
+                        name="file_subject"
+                        id="file_subject"
+                        className="cf-input"
+                        value={formData.file_subject}
+                        onChange={handleChange}
+                        disabled={viewMode}
+                        placeholder="Enter file subject..."
+                      />
+                    </div>
+                    <div className="col-md-12">
+                      <label className="form-label" htmlFor="remarks">File Matter:</label>
+                      {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
+                      <RemarksEditor formData={formData} setFormData={setFormData}
+                        viewMode={viewMode} />
+                      {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
         viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/> */}
-                </div>
-                {/* Row 3 */}
-                <div className="row mb-3">
-                  {/* <div className="col-md-6 d-flex align-items-center gap-2">
+                    </div>
+                    {/* Row 3 */}
+                    <div className="row mb-3">
+                      {/* <div className="col-md-6 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="receiver">File Recipient:</label>
       <input type="text" name="receiver" id="receiver" className="form-control" value={formData.receiver} onChange={handleChange} disabled={viewMode}/>
     </div> */}
-                  {fileToEdit?.id && <div className="col-md-6 d-flex align-items-center gap-2">
-                    <label className="form-label mb-0" htmlFor="date_added">Date:</label>
-                    <input type="datetime-local" name="date_added" id="date_added" className="form-control" value={formData.date_added} onChange={handleChange} disabled={viewMode} />
-                  </div>}
-                  {/* <div className="col-md-6 d-flex align-items-center gap-2">
+                      {fileToEdit?.id && <div className="col-md-6 d-flex align-items-center gap-2">
+                        <label className="form-label mb-0" htmlFor="date_added">Date:</label>
+                        <input type="datetime-local" name="date_added" id="date_added" className="form-control" value={formData.date_added} onChange={handleChange} disabled={viewMode} />
+                      </div>}
+                      {/* <div className="col-md-6 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="current_status">Live File Location:</label>      
       <Select
                   options={departments}
@@ -1408,8 +1357,8 @@ export default function CreateFile() {
                   placeholder="Live File Location"
                 /> 
     </div> */}
-                </div>
-                {/* <div className="row mb-3">
+                    </div>
+                    {/* <div className="row mb-3">
     <div className="col-md-6 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="inwardnum">Inward No:</label>
       <input type="text" name="inwardnum" id="inwardnum" className="form-control" value={formData.inwardnum} onChange={handleChange} disabled={viewMode}/>
@@ -1421,53 +1370,53 @@ export default function CreateFile() {
   
   </div> */}
 
-                {/* <div className="row mb-3">
+                    {/* <div className="row mb-3">
         <div className="col-md-12 d-flex align-items-center gap-2">
       <label className="form-label mb-0" htmlFor="current_status">Live File Location:</label>
       <input type="text" name="current_status" id="current_status" className="form-control" value={formData.current_status} onChange={handleChange} disabled={viewMode}/>
     </div>
    </div> */}
-                {/* Remarks */}
-                {/* <div className="row mb-3">
+                    {/* Remarks */}
+                    {/* <div className="row mb-3">
     <div className="col-md-12">
       <label className="form-label" htmlFor="remarks">Note File:</label> */}
-                {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
-                {/* <RemarksEditor formData={formData} setFormData={setFormData}
+                    {/* <textarea name="remarks" id="remarks" className="form-control" rows="10" value={formData.remarks} onChange={handleChange} disabled={viewMode}></textarea> */}
+                    {/* <RemarksEditor formData={formData} setFormData={setFormData}
             viewMode={viewMode} /> */}
-                {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
+                    {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
         viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id}/> */}
-                {/* </div>
+                    {/* </div>
   </div> */}
 
-                {/* Attachments */}
-                {/* <div className="row mb-4">
+                    {/* Attachments */}
+                    {/* <div className="row mb-4">
     <div className="col-md-12">
       <label className="form-label" htmlFor="file">Attachments:</label>
       <input type="file" className="form-control" multiple name="file" id="file" onChange={handleFileChange} />
     </div>
   </div> */}
-                {attachments?.length > 0 && (
-                  <div className="mb-3">
-                    <label className="form-label">Existing Attachments:</label>
-                    <ul className="list-group">
-                      {attachments?.map((att, index) => (
-                        <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
-                          <a href={`${BASE_URL}/${att.path}`} target="_blank" rel="noopener noreferrer" className="text-break">
-                            {att?.document_id ? `[${att.document_id}] ` : ""}{att?.filename}
-                          </a>
-                          {!viewMode && <button
-                            onClick={() => handleDeleteAttachment(att?.id)}
-                            className="btn btn-sm btn-danger">
-                            Delete
-                          </button>}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {!viewMode && <div className="row mb-4">
-                  <div className="col-md-12">
-                    {/* <label className="form-label">Attachments:</label>
+                    {attachments?.length > 0 && (
+                      <div className="mb-3">
+                        <label className="form-label">Existing Attachments:</label>
+                        <ul className="list-group">
+                          {attachments?.map((att, index) => (
+                            <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
+                              <a href={`${BASE_URL}/${att.path}`} target="_blank" rel="noopener noreferrer" className="text-break">
+                                {att?.document_id ? `[${att.document_id}] ` : ""}{att?.filename}
+                              </a>
+                              {!viewMode && <button
+                                onClick={() => handleDeleteAttachment(att?.id)}
+                                className="btn btn-sm btn-danger">
+                                Delete
+                              </button>}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {!viewMode && <div className="row mb-4">
+                      <div className="col-md-12">
+                        {/* <label className="form-label">Attachments:</label>
                 <div className="input-group">
                   <label htmlFor="file" className="btn btn-primary">
                     Choose Files
@@ -1486,41 +1435,41 @@ export default function CreateFile() {
                       : "No files selected"}
                   </div>
                 </div> */}
-                    <div className="attachments-wrapper">
-                      <label className="attachments-label">Attachments:</label>
+                        <div className="attachments-wrapper">
+                          <label className="attachments-label">Attachments:</label>
 
-                      <div className="attachments-row">
-                        <label htmlFor="fileInput" className="btn btn-primary">
-                          Choose Files
-                        </label>
+                          <div className="attachments-row">
+                            <label htmlFor="fileInput" className="btn btn-primary">
+                              Choose Files
+                            </label>
 
-                        <input
-                          type="file"
-                          id="fileInput"
-                          multiple
-                          hidden
-                          onChange={handleFileChange}
-                        />
+                            <input
+                              type="file"
+                              id="fileInput"
+                              multiple
+                              hidden
+                              onChange={handleFileChange}
+                            />
 
-                        {file.map((file, index) => (
-                          <div key={index} className="file-chip">
-                            <span className="file-name" title={file.name}>
-                              {file.name}
-                            </span>
-                            <button
-                              type="button"
-                              className="file-remove"
-                              onClick={() => removeFile(index)}
-                            >
-                              ✕
-                            </button>
+                            {file.map((file, index) => (
+                              <div key={index} className="file-chip">
+                                <span className="file-name" title={file.name}>
+                                  {file.name}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="file-remove"
+                                  onClick={() => removeFile(index)}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>}
-                {/* <div className="row mb-3">
+                    </div>}
+                    {/* <div className="row mb-3">
               <div className="col-md-12 d-flex align-items-center gap-2">
                 <label className="form-label mb-0" htmlFor="receiver">Forwarded To:</label>
               
@@ -1535,7 +1484,7 @@ export default function CreateFile() {
                 />
               </div>
             </div> */}
-                {/* {fileToEdit?.id && user?.user?.role === 'admin' && <button 
+                    {/* {fileToEdit?.id && user?.user?.role === 'admin' && <button 
             className="btn btn-primary ms-auto"
             onClick={() => handleEditClick(fileToEdit)}>EDIT FILE</button>}
             
@@ -1545,10 +1494,10 @@ export default function CreateFile() {
         File Timeline
       </button>
     </div>} */}
-                {fileToEdit?.id && (
-                  <div className="d-flex mt-3">
-                    {console.log('user role', user)}
-                    {/* {(user?.user?.role_id == 1 || user?.user?.role_id == 2) && (
+                    {fileToEdit?.id && (
+                      <div className="d-flex mt-3">
+                        {console.log('user role', user)}
+                        {/* {(user?.user?.role_id == 1 || user?.user?.role_id == 2) && (
       <button 
         className="btn btn-primary"
         onClick={() => handleEditClick(fileToEdit)}
@@ -1556,67 +1505,67 @@ export default function CreateFile() {
         EDIT FILE
       </button>
     )} */}
-                    {(hasPermission("edit")) && (
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleEditClick(fileToEdit)}
-                      >
-                        EDIT FILE
-                      </button>
+                        {(hasPermission("edit")) && (
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => handleEditClick(fileToEdit)}
+                          >
+                            EDIT FILE
+                          </button>
+                        )}
+                        <div className="ms-auto">
+                          <button
+                            className="btn btn-secondary px-5"
+                            onClick={() => handleTimeline(fileToEdit)}
+                          >
+                            File Timeline
+                          </button>
+                        </div>
+
+                      </div>
                     )}
-                    <div className="ms-auto">
-                      <button
-                        className="btn btn-secondary px-5"
-                        onClick={() => handleTimeline(fileToEdit)}
-                      >
-                        File Timeline
-                      </button>
-                    </div>
 
-                  </div>
-                )}
+                    {/* Add more rows as per previous layout */}
 
-                {/* Add more rows as per previous layout */}
+                    {/* Final Save Button */}
+                    {/* Show button if not in viewMode, OR if DESK user with DRAFT/pending file */}
+                    {(!viewMode || (hasRole('DESK') && (fileToEdit?.status === 'DRAFT' || fileToEdit?.status === 'pending'))) && (
+                      <form onSubmit={(e) =>
+                        handleCreateFile({
+                          e,
+                          mode: fileToEdit?.id ? "edit" : "create",
+                          formData,
+                          fileToEdit: fileToEdit || null,
+                          selectedDepartment,
+                          selectedReceiver,
+                          selectedDivision,
+                          selectedUnit,
+                          approvalStatus,
+                          fileName,
+                          setFileNumber,
+                          file,
+                          existingAttachments: attachments, // Pass forwarded attachments
+                          // Navigate to Created Files tab after file creation
+                          stayOnPage: false
+                        })
+                      }>
+                        <div className="d-flex justify-content-center mt-4 gap-3">
+                          {/* For DESK users with pending files: show Create File button */}
+                          {hasRole('DESK') && fileToEdit?.status === 'pending' ? (
+                            <div>
+                              <button className="btn btn-success px-5" type="submit">
+                                Create File
+                              </button>
+                            </div>
+                          ) : (
+                            <div>
+                              <button className="btn btn-success px-5" type="submit">
+                                {fileToEdit?.id ? 'Update' : 'Create'}
+                              </button>
+                            </div>
+                          )}
 
-                {/* Final Save Button */}
-                {/* Show button if not in viewMode, OR if DESK user with DRAFT/pending file */}
-                {(!viewMode || (hasRole('DESK') && (fileToEdit?.status === 'DRAFT' || fileToEdit?.status === 'pending'))) && (
-                  <form onSubmit={(e) =>
-                    handleCreateFile({
-                      e,
-                      mode: fileToEdit?.id ? "edit" : "create",
-                      formData,
-                      fileToEdit: fileToEdit || null,
-                      selectedDepartment,
-                      selectedReceiver,
-                      selectedDivision,
-                      selectedUnit,
-                      approvalStatus,
-                      fileName,
-                      setFileNumber,
-                      file,
-                      existingAttachments: attachments, // Pass forwarded attachments
-                      // Navigate to Created Files tab after file creation
-                      stayOnPage: false
-                    })
-                  }>
-                    <div className="d-flex justify-content-center mt-4 gap-3">
-                      {/* For DESK users with pending files: show Create File button */}
-                      {hasRole('DESK') && fileToEdit?.status === 'pending' ? (
-                        <div>
-                          <button className="btn btn-success px-5" type="submit">
-                            Create File
-                          </button>
-                        </div>
-                      ) : (
-                        <div>
-                          <button className="btn btn-success px-5" type="submit">
-                            {fileToEdit?.id ? 'Update' : 'Create'}
-                          </button>
-                        </div>
-                      )}
-
-                      {/* <button
+                          {/* <button
                     disabled={!fileToEdit?.id}
                     onClick={(e) =>
                       handleSendFile({
@@ -1627,54 +1576,21 @@ export default function CreateFile() {
                   >
                     Send File
                   </button> */}
-                      {fileToEdit?.id && fileToEdit?.status !== 'pending' && <div>
-                        <button className="btn btn-secondary px-5" onClick={handleCancel}>
-                          Cancel
-                        </button>
-                      </div>}
+                          {fileToEdit?.id && fileToEdit?.status !== 'pending' && <div>
+                            <button className="btn btn-secondary px-5" onClick={handleCancel}>
+                              Cancel
+                            </button>
+                          </div>}
 
-                    </div>
-                  </form>
-                )}
-              </>
-            )}
-          </div>
+                        </div>
+                      </form>
+                    )}
 
-          {/* Right Column - DocumentEditor */}
-          <div className="col-md-12 bg-light border p-4">
-            {/* <h4 className="text-center">Comments</h4> */}
 
-            {/* <h3>Comments</h3> */}
-            {comments?.map((comment) => (
-              <div className="card w-100" key={comment?.id}>
-                <div className="card-body">
-                  <h5 className="card-title">{stripHtml(comment?.comment)}</h5>
-                  <p className="card-text">By: {comment?.username}</p>
-                  <span>{new Date(comment?.created_at).toLocaleString()}</span>
-                  {/* <a href="#" class="btn btn-primary">Button</a> */}
-                  <span>{comment?.attachments?.map((attach, idx) => <p key={idx} style={{ color: 'red' }}>Attachments: <a href={`${BASE_URL}/${attach?.path}`} target="_blank" rel="noopener noreferrer" className="text-break">
-                    {attach?.document_id ? `[${attach.document_id}] ` : ""}{attach?.filename}
-                  </a></p>)}</span>
-                </div>
-              </div>
-            ))}
-            <div className="container">
-              {/* <DocumentEditor file_id={formData?.file_id} fetchComments={fetchComments}
-                viewMode={viewMode} approvalStatus={approvalStatus} setApprovalStatus={setApprovalStatus} selectedDepartment={selectedDepartment} receiver={formData?.receiver} id={fileToEdit?.id} /> */}
-              {/* Optional: Show Timeline Button */}
-              {/* <button className="btn btn-success px-5 mt-3" onClick={handleTimeline}>Show Timeline</button> */}
-              {/* <div style={{ marginTop: "20px" }}><button
-                className="btn btn-warning px-5"
-                onClick={handleHighPriority}>Request High Priority</button></div> */}
+                  </div>
+                </>
+              )}
             </div>
-
-            {/* <div class="card w-75">
-  <div class="card-body">
-    <h5 class="card-title">Card title</h5>
-    <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
-    <a href="#" class="btn btn-primary">Button</a>
-  </div>
-</div> */}
           </div>
         </div>
       </div>

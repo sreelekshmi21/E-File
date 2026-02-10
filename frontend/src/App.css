@@ -43,3 +43,26 @@
 .read-the-docs {
   color: #888;
 }
+
+/* ===== React-Toastify: Mobile-Only Fix (Desktop unchanged) ===== */
+@media only screen and (max-width: 480px) {
+  .Toastify__toast-container {
+    width: calc(100vw - 48px) !important;
+    max-width: 400px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    padding: 0 !important;
+  }
+
+  .Toastify__toast-container--top-right,
+  .Toastify__toast-container--top-left,
+  .Toastify__toast-container--top-center {
+    top: 12px !important;
+  }
+
+  .Toastify__toast {
+    border-radius: 8px !important;
+    margin-bottom: 8px !important;
+  }
+}
