@@ -1162,7 +1162,7 @@ export default function CreateFile() {
                             multiple
                             hidden
                             onChange={handleFileChange}
-                            accept=".pdf,.jpg,.jpeg,.png,.tiff,.doc,.docx"
+                            accept=".pdf,.jpg,.jpeg,.png,.tiff,.doc,.docx,.xlsx,.odt,.ods,.odg"
                           />
                           {file.map((f, index) => (
                             <div key={index} className="file-chip">
@@ -1449,6 +1449,7 @@ export default function CreateFile() {
                               multiple
                               hidden
                               onChange={handleFileChange}
+                              accept=".pdf,.jpg,.jpeg,.png,.tiff,.doc,.docx,.xlsx,.odt,.ods,.odg"
                             />
 
                             {file.map((file, index) => (

@@ -793,6 +793,7 @@ export default function ViewPage() {
                     multiple
                     hidden
                     onChange={handleFileChange}
+                    accept=".pdf,.jpg,.jpeg,.png,.tiff,.doc,.docx,.xlsx,.odt,.ods,.odg"
                   />
 
                   {file.map((file, index) => (
